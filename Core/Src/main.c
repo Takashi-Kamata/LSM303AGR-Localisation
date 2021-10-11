@@ -213,6 +213,11 @@ int main(void)
 			int16_t arr_y[sample];
 			int16_t arr_z[sample];
 			for (int i=0;i<sample;i++) {
+
+				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+				while (((STATUS_REG_A_val & 0x08)>>3) != 1) {
+					STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+				}
 				OUT_X_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_L_A, 1, &OUT_X_L_A_val, 1, 50);
 				OUT_X_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_H_A, 1, &OUT_X_H_A_val, 1, 50);
 
@@ -223,7 +228,6 @@ int main(void)
 				OUT_Z_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Z_H_A, 1, &OUT_Z_H_A_val, 1, 50);
 
 				if (OUT_X_L_A_status == HAL_OK && OUT_X_H_A_status == HAL_OK) {
-//					OUT_X_A_val = (((OUT_X_H_A_val<<8) | OUT_X_L_A_val)>>6);
 					OUT_X_A_val = OUT_X_H_A_val;
 					OUT_X_A_val <<= 8;
 					OUT_X_A_val |= OUT_X_L_A_val;
@@ -234,7 +238,6 @@ int main(void)
 				}
 
 				if (OUT_Y_L_A_status == HAL_OK && OUT_Y_H_A_status == HAL_OK) {
-//					OUT_Y_A_val = (((OUT_Y_H_A_val<<8) | OUT_Y_L_A_val)>>6);
 					OUT_Y_A_val = OUT_Y_H_A_val;
 					OUT_Y_A_val <<= 8;
 					OUT_Y_A_val |= OUT_Y_L_A_val;
@@ -245,7 +248,6 @@ int main(void)
 				}
 
 				if (OUT_Z_L_A_status == HAL_OK && OUT_Z_H_A_status == HAL_OK) {
-//					OUT_Z_A_val = (((OUT_Z_H_A_val<<8) | OUT_Z_L_A_val)>>6);
 					OUT_Z_A_val = OUT_Z_H_A_val;
 					OUT_Z_A_val <<= 8;
 					OUT_Z_A_val |= OUT_Z_L_A_val;
@@ -282,7 +284,7 @@ int main(void)
 
 
 		} else {
-			HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Not Good \n\r"), 100);
+//			HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Not Good \n\r"), 100);
 		}
 
 
@@ -388,7 +390,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
 	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 9600;
+	huart2.Init.BaudRate = 115200;
 	huart2.Init.WordLength = UART_WORDLENGTH_8B;
 	huart2.Init.StopBits = UART_STOPBITS_1;
 	huart2.Init.Parity = UART_PARITY_NONE;
