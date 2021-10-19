@@ -82,6 +82,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
+float KALMAN_X(float U);
+float KALMAN_Y(float U);
+float KALMAN_Z(float U);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -296,6 +300,8 @@ int main(void)
 			int16_t arr_x_a[sample_a];
 			int16_t arr_y_a[sample_a];
 			int16_t arr_z_a[sample_a];
+			int16_t arr_kalman_x[sample_a];
+			int16_t arr_kalman_x_2[sample_a];
 			for (int i=0;i<sample_a;i++) {
 
 				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
@@ -331,9 +337,11 @@ int main(void)
 					OUT_Z_A_val |= OUT_Z_L_A_val;
 					OUT_Z_A_val >>= 6;
 				}
-				arr_x_a[i] = OUT_X_A_val;
-				arr_y_a[i] = OUT_Y_A_val;
-				arr_z_a[i] = OUT_Z_A_val;
+				arr_x_a[i] = (OUT_X_A_val);
+				arr_y_a[i] = (OUT_Y_A_val);
+				arr_z_a[i] = (OUT_Z_A_val);
+
+
 			}
 
 			/*
@@ -356,11 +364,19 @@ int main(void)
 			avg_z_a = (avg_z_a / sample_a) * (4.0 / 1023);
 
 			/*
+			 * Kalman Filter
+			 */
+			avg_x_a = KALMAN_X(avg_x_a);
+			avg_y_a = KALMAN_Y(avg_y_a);
+			avg_z_a = KALMAN_Z(avg_z_a);
+
+			/*
 			 * Serial
 			 */
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_x_a), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_y_a), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", avg_z_a), 100); // @suppress("Float formatting support")
+
 		} else {
 
 		}
@@ -446,7 +462,7 @@ int main(void)
 			/*
 			 * Total Gauss
 			 */
-			float total = avg_x_m+avg_y_m+avg_z_m;
+//			float total = avg_x_m+avg_y_m+avg_z_m;
 //			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Total: % 06.5f Gauss \n\r", total), 100); // @suppress("Float formatting support")
 		} else {
 
@@ -455,10 +471,49 @@ int main(void)
 		/*
 		 * Wait
 		 */
-		HAL_Delay(100);
+		//HAL_Delay(100);
 
 	}
 }
+
+static float P_X = 0;
+static float U_hat_X = 0;
+static float K_X = 0;
+static float P_Y = 0;
+static float U_hat_Y = 0;
+static float K_Y = 0;
+static float P_Z = 0;
+static float U_hat_Z = 0;
+static float K_Z = 0;
+
+static const float R = 150;
+static const float H = 1.0;
+static float Q = 20;
+
+float KALMAN_X(float U) {
+	K_X = P_X*H/(H*P_X*H+R);
+	U_hat_X = U_hat_X+K_X*(U-H*U_hat_X);
+	P_X=(1-K_X*H)*P_X+Q;
+
+	return U_hat_X;
+}
+
+float KALMAN_Y(float U) {
+	K_Y = P_Y*H/(H*P_Y*H+R);
+	U_hat_Y = U_hat_Y+K_Y*(U-H*U_hat_Y);
+	P_Y=(1-K_Y*H)*P_Y+Q;
+
+	return U_hat_Y;
+}
+
+float KALMAN_Z(float U) {
+	K_Z = P_Z*H/(H*P_Z*H+R);
+	U_hat_Z = U_hat_Z+K_Z*(U-H*U_hat_Z);
+	P_Z=(1-K_Z*H)*P_Z+Q;
+
+	return U_hat_Z;
+}
+
 
 /**
   * @brief System Clock Configuration
