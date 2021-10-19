@@ -284,7 +284,7 @@ int main(void)
 	while (1)
 	{
 
-		HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
+		//HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
 
 		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
 
@@ -358,9 +358,9 @@ int main(void)
 			/*
 			 * Serial
 			 */
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "X: % 06.5fG  ", avg_x_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Y: % 06.5fG  ", avg_y_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Z: % 06.5fG  \n\r", avg_z_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_x_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_y_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", avg_z_a), 100); // @suppress("Float formatting support")
 		} else {
 
 		}
@@ -438,10 +438,11 @@ int main(void)
 			/*
 			 * Serial
 			 */
+			/*
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: % 06.5f Gauss ", avg_x_m), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: % 06.5f Gauss ", avg_y_m), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: % 06.5f Gauss  \n\r", avg_z_m), 100); // @suppress("Float formatting support")
-
+			*/
 			/*
 			 * Total Gauss
 			 */

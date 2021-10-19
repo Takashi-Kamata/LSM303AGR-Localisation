@@ -44,20 +44,20 @@ function readSerialData(serialportObj,~)
     
     % If 1001 data points have been collected from the Arduino, switch off the
     % callbacks and plot the data.
-    if serialportObj.UserData.Count > 100
+    if serialportObj.UserData.Count > 200
         configureCallback(serialportObj, "off");
         hold on
         plot(serialportObj.UserData.X(2:end));
         plot(serialportObj.UserData.Y(2:end));
         plot(serialportObj.UserData.Z(2:end));
         legend("X", "Y", "Z");
-        counter = 0;
+
         for i = serialportObj.UserData.X(2:end)
-            if (i  -1.27)
-                counter = counter + 1;
+            if (i > 0.7)
+                cou
+
             end
         end
-        disp(counter);
         disp("Finished");
     end
 %     disp(X);
