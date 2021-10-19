@@ -44,6 +44,19 @@
 #define OUT_Z_L_A 0x2C
 #define OUT_Z_H_A 0x2D
 
+#define MAG 0b0011110
+#define WHO_AM_I_M 0x4F
+#define CFG_REG_A_M 0x60
+#define CFG_REG_B_M 0x61
+#define CFG_REG_C_M 0x62
+#define STATUS_REG_M 0x67
+#define OUTX_L_REG_M 0x68
+#define OUTX_H_REG_M 0x69
+#define OUTY_L_REG_M 0x6A
+#define OUTY_H_REG_M 0x6B
+#define OUTZ_L_REG_M 0x6C
+#define OUTZ_H_REG_M 0x6D
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -116,7 +129,10 @@ int main(void)
 	}
 	HAL_UART_Transmit(&huart2,  (uint8_t*)"Scanned\n\r", 10, 100);
 
-
+	/*
+	 * Start up
+	 */
+	HAL_Delay(500);
 	/*
 	 * Accelerometer
 	 */
@@ -162,15 +178,9 @@ int main(void)
 	}
 
 	/*
-	 * Start up
-	 */
-	HAL_Delay(500);
-
-	/*
 	 * Check Status
 	 */
 	uint8_t STATUS_REG_A_val = 0;
-
 	HAL_StatusTypeDef STATUS_REG_A_status;
 
 	/*
@@ -197,22 +207,96 @@ int main(void)
 	HAL_StatusTypeDef OUT_Z_L_A_status = 0x00;
 	HAL_StatusTypeDef OUT_Z_H_A_status = 0x00;
 
+
+	/*
+	 * Magnetometer
+	 */
+	/*
+	 * Check Communication from Magnetometer
+	 */
+	char mag_enabled[50] = "Magnetometer Enabled\n\r";
+	uint8_t who_am_i_m_val;
+	HAL_StatusTypeDef who_am_i_m_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1 , WHO_AM_I_M, 1, &who_am_i_m_val, 1, 50);
+	char MAG_Buffer[32];
+	if (who_am_i_m_status == HAL_OK && who_am_i_m_val == 64) {
+		HAL_UART_Transmit(&huart2, (uint8_t*)mag_enabled , sizeof(mag_enabled), 100);
+	} else if (who_am_i_m_status != HAL_OK) {
+		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%d\n\r", who_am_i_m_status), 100);
+	}
+	/*
+	 * Set Control Registers
+	 */
+	uint8_t CFG_REG_A_M_val = 0x8C;
+	uint8_t CFG_REG_B_M_val = 0x02;
+	uint8_t CFG_REG_C_M_val = 0x10;
+
+	HAL_StatusTypeDef CFG_REG_A_M_Status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_A_M, 1, &CFG_REG_A_M_val, 1, 50);
+	HAL_StatusTypeDef CFG_REG_B_M_status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_B_M, 1, &CFG_REG_B_M_val, 1, 50);
+	HAL_StatusTypeDef CFG_REG_C_M_status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_C_M, 1, &CFG_REG_C_M_val, 1, 50);
+
+	if (CFG_REG_A_M_Status != HAL_OK) {
+		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG1:  %d\n\r", CFG_REG_A_M_Status), 100);
+	}
+
+	if (CFG_REG_B_M_status != HAL_OK) {
+		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG2:  %d\n\r", CFG_REG_B_M_status), 100);
+	}
+
+	if (CFG_REG_C_M_status != HAL_OK) {
+		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG3:  %d\n\r", CFG_REG_C_M_status), 100);
+	}
+
+	/*
+	 * Check Status
+	 */
+	uint8_t STATUS_REG_M_val = 0;
+	HAL_StatusTypeDef STATUS_REG_M_status;
+
+	/*
+	 * Read First
+	 */
+	uint8_t OUTX_L_REG_M_val = 0x00;
+	uint8_t OUTX_H_REG_M_val = 0x00;
+	int16_t OUTX_M_val = 0x00;
+
+	uint8_t OUTY_L_REG_M_val = 0x00;
+	uint8_t OUTY_H_REG_M_val = 0x00;
+	int16_t OUTY_M_val = 0x00;
+
+	uint8_t OUTZ_L_REG_M_val = 0x00;
+	uint8_t OUTZ_H_REG_M_val = 0x00;
+	int16_t OUTZ_M_val = 0x00;
+
+	HAL_StatusTypeDef OUTX_L_M_status = 0x00;
+	HAL_StatusTypeDef OUTX_H_M_status = 0x00;
+
+	HAL_StatusTypeDef OUTY_L_M_status = 0x00;
+	HAL_StatusTypeDef OUTY_H_M_status = 0x00;
+
+	HAL_StatusTypeDef OUTZ_L_M_status = 0x00;
+	HAL_StatusTypeDef OUTZ_H_M_status = 0x00;
+
+
+	/*
+	 * Start up
+	 */
+	HAL_Delay(1000);
 	while (1)
 	{
 
+		HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
 
 		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
-//		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Status Register: %d\n\r", STATUS_REG_A_val), 100);
+
 		if (STATUS_REG_A_status == HAL_OK && ((STATUS_REG_A_val & 0x08)>>3) == 1) {
 			/*
 			 * Sampling
 			 */
-
-			uint8_t sample = 5;
-			int16_t arr_x[sample];
-			int16_t arr_y[sample];
-			int16_t arr_z[sample];
-			for (int i=0;i<sample;i++) {
+			uint8_t sample_a = 5;
+			int16_t arr_x_a[sample_a];
+			int16_t arr_y_a[sample_a];
+			int16_t arr_z_a[sample_a];
+			for (int i=0;i<sample_a;i++) {
 
 				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
 				while (((STATUS_REG_A_val & 0x08)>>3) != 1) {
@@ -232,9 +316,6 @@ int main(void)
 					OUT_X_A_val <<= 8;
 					OUT_X_A_val |= OUT_X_L_A_val;
 					OUT_X_A_val >>= 6;
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Low: %x\n\r", OUT_Y_L_A_val), 100);
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "High: %x\n\r", OUT_Y_H_A_val), 100);
-//					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "X: %05d ", OUT_X_A_val), 100);
 				}
 
 				if (OUT_Y_L_A_status == HAL_OK && OUT_Y_H_A_status == HAL_OK) {
@@ -242,9 +323,6 @@ int main(void)
 					OUT_Y_A_val <<= 8;
 					OUT_Y_A_val |= OUT_Y_L_A_val;
 					OUT_Y_A_val >>= 6;
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Low: %x\n\r", OUT_Y_L_A_val), 100);
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "High: %x\n\r", OUT_Y_H_A_val), 100);
-//					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Y: %05d ", OUT_Y_A_val), 100);
 				}
 
 				if (OUT_Z_L_A_status == HAL_OK && OUT_Z_H_A_status == HAL_OK) {
@@ -252,45 +330,131 @@ int main(void)
 					OUT_Z_A_val <<= 8;
 					OUT_Z_A_val |= OUT_Z_L_A_val;
 					OUT_Z_A_val >>= 6;
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Low: %x\n\r", OUT_Y_L_A_val), 100);
-			//		HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "High: %x\n\r", OUT_Y_H_A_val), 100);
-//					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Z: %05d\n\r", OUT_Z_A_val), 100);
 				}
-//				HAL_Delay(500);
-				arr_x[i] = OUT_X_A_val;
-				arr_y[i] = OUT_Y_A_val;
-				arr_z[i] = OUT_Z_A_val;
+				arr_x_a[i] = OUT_X_A_val;
+				arr_y_a[i] = OUT_Y_A_val;
+				arr_z_a[i] = OUT_Z_A_val;
 			}
 
 			/*
 			 * Average
 			 */
-			float avg_x = 0;
-			float avg_y = 0;
-			float avg_z = 0;
-			for (int i=0;i<sample;i++) {
-				avg_x += arr_x[i];
-				avg_y += arr_y[i];
-				avg_z += arr_z[i];
+			float avg_x_a = 0;
+			float avg_y_a = 0;
+			float avg_z_a = 0;
+			for (int i=0;i<sample_a;i++) {
+				avg_x_a += arr_x_a[i];
+				avg_y_a += arr_y_a[i];
+				avg_z_a += arr_z_a[i];
 			}
-			avg_x = (avg_x / sample) * (4.0 / 1023);
-			avg_y = (avg_y / sample) * (4.0 / 1023);
-			avg_z = (avg_z / sample) * (4.0 / 1023);
 
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "X: % 06.5fG  ", avg_x), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Y: % 06.5fG  ", avg_y), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Z: % 06.5fG  \n\r", avg_z), 100); // @suppress("Float formatting support")
+			/*
+			 * Calculation
+			 */
+			avg_x_a = (avg_x_a / sample_a) * (4.0 / 1023);
+			avg_y_a = (avg_y_a / sample_a) * (4.0 / 1023);
+			avg_z_a = (avg_z_a / sample_a) * (4.0 / 1023);
 
-
-
+			/*
+			 * Serial
+			 */
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "X: % 06.5fG  ", avg_x_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Y: % 06.5fG  ", avg_y_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Z: % 06.5fG  \n\r", avg_z_a), 100); // @suppress("Float formatting support")
 		} else {
-//			HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Not Good \n\r"), 100);
+
 		}
 
 
+		STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
 
+		if (STATUS_REG_M_status == HAL_OK && ((STATUS_REG_M_val & 0x08)>>3) == 1) {
+			/*
+			 * Sampling
+			 */
+			uint8_t sample_m = 5;
+			int16_t arr_x_m[sample_m];
+			int16_t arr_y_m[sample_m];
+			int16_t arr_z_m[sample_m];
+			for (int i=0;i<sample_m;i++) {
 
+				STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
+				while (((STATUS_REG_M_val & 0x08)>>3) != 1) {
+					STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
+				}
+				OUTX_L_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTX_L_REG_M, 1, &OUTX_L_REG_M_val, 1, 50);
+				OUTX_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTX_H_REG_M, 1, &OUTX_H_REG_M_val, 1, 50);
 
+				OUTY_L_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTY_L_REG_M, 1, &OUTY_L_REG_M_val, 1, 50);
+				OUTY_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTY_H_REG_M, 1, &OUTY_H_REG_M_val, 1, 50);
+
+				OUTZ_L_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTZ_L_REG_M, 1, &OUTZ_L_REG_M_val, 1, 50);
+				OUTZ_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTZ_H_REG_M, 1, &OUTZ_H_REG_M_val, 1, 50);
+
+				if (OUTX_L_M_status == HAL_OK && OUTX_H_M_status == HAL_OK) {
+					OUTX_M_val = OUTX_L_REG_M_val;
+					OUTX_M_val <<= 8;
+					OUTX_M_val |= OUTX_H_REG_M_val;
+//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: %05d  ", OUTX_M_val), 100);
+				}
+
+				if (OUTY_L_M_status == HAL_OK && OUTY_H_M_status == HAL_OK) {
+					OUTY_M_val = OUTY_L_REG_M_val;
+					OUTY_M_val <<= 8;
+					OUTY_M_val |= OUTZ_H_REG_M_val;
+//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: %05d  ", OUTY_M_val), 100);
+				}
+
+				if (OUTZ_L_M_status == HAL_OK && OUTZ_H_M_status == HAL_OK) {
+					OUTZ_M_val = OUTZ_L_REG_M_val;
+					OUTZ_M_val <<= 8;
+					OUTZ_M_val |= OUTZ_L_M_status;
+//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: %05d  \n\r", OUTZ_M_val), 100);
+				}
+				arr_x_m[i] = OUTX_M_val;
+				arr_y_m[i] = OUTY_M_val;
+				arr_z_m[i] = OUTZ_M_val;
+			}
+
+			/*
+			 * Average
+			 */
+			float avg_x_m = 0;
+			float avg_y_m = 0;
+			float avg_z_m = 0;
+			for (int i=0;i<sample_m;i++) {
+				avg_x_m += arr_x_m[i];
+				avg_y_m += arr_y_m[i];
+				avg_z_m += arr_z_m[i];
+			}
+
+			/*
+			 * Calculation
+			 */
+			avg_x_m = (avg_x_m / sample_m) * (100.0/65536);
+			avg_y_m = (avg_y_m / sample_m) * (100.0/65536);
+			avg_z_m = (avg_z_m / sample_m) * (100.0/65536);
+
+			/*
+			 * Serial
+			 */
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: % 06.5f Gauss ", avg_x_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: % 06.5f Gauss ", avg_y_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: % 06.5f Gauss  \n\r", avg_z_m), 100); // @suppress("Float formatting support")
+
+			/*
+			 * Total Gauss
+			 */
+			float total = avg_x_m+avg_y_m+avg_z_m;
+//			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Total: % 06.5f Gauss \n\r", total), 100); // @suppress("Float formatting support")
+		} else {
+
+		}
+
+		/*
+		 * Wait
+		 */
+		HAL_Delay(100);
 
 	}
 }
