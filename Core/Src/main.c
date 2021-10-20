@@ -306,12 +306,20 @@ int main(void)
 	 */
 	int pushed = 0;
 
+
 	/*
-	 * Calibration
+	 * Tick
 	 */
-	float cal_x = 0.0;
-	float cal_y = 0.0;
-	float cal_z = 0.0;
+	uint32_t prev_tick =  HAL_GetTick();
+	uint32_t current_tick =  HAL_GetTick();
+
+	/*
+	 * Step Count
+	 */
+	uint8_t start_count = 0;
+	uint8_t step_counting = 0;
+	uint16_t steps = 0;
+	uint32_t increase_prev = 0;
 
 	while (1)
 	{
@@ -404,28 +412,51 @@ int main(void)
 			 * Serial
 			 */
 			/*
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_x_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a), 100); // @suppress("Float formatting support")
+			 * MATLAB
+			 */
+			/*
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_x_a - cal_x), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a - cal_y), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a - cal_z), 100); // @suppress("Float formatting support")
 			*/
+			current_tick = HAL_GetTick();
 
+			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 500) {
+				step_counting = 1;
+				increase_prev = HAL_GetTick();
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
+			}
+			if (step_counting == 1 && U_hat_x_a < -0.5) {
+				step_counting = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
+				steps++;
+			}
+			prev_tick = current_tick;
 		} else {
 
+
 		}
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
-            pushed = 1;
-//            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-//            HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Button Pressed\n\r"), 100);
-            cal_x = avg_x_a;
-            cal_y = avg_y_a;
-            cal_z = avg_z_a;
-            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-        } else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
-            pushed = 0;
-            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-        }
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
+			pushed = 1;
+			if (start_count == 0) {
+				steps = 0;
+				start_count = 1;
+				increase_prev = HAL_GetTick();
+			} else if (start_count == 1) {
+				start_count = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
+
+			}
+
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
+			pushed = 0;
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
+		}
+	}
 
 }
+
 
 
 

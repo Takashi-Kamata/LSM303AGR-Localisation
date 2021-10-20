@@ -10,7 +10,7 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("X",[], "Y",[], "Z",[] ,"Count",1);
 
 figure(1);
-xlim([0 200])
+xlim([0 300])
 ylim([-2 2])
 hold on
 title("Acceleration + Kalman Filter");
@@ -33,7 +33,7 @@ function readSerialData(serialportObj,~)
     
     drawnow;
     
-    if serialportObj.UserData.Count > 200
+    if serialportObj.UserData.Count > 300
         configureCallback(serialportObj, "off");
         legend("X", "Y", "Z");
         disp("Finished");
