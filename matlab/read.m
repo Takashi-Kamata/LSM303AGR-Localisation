@@ -27,9 +27,9 @@ function readSerialData(serialportObj,~)
 
     serialportObj.UserData.Count = serialportObj.UserData.Count + 1;
 
-    plot(serialportObj.UserData.X(2:end), 'r', 'LineWidth',3);
-    plot(serialportObj.UserData.Y(2:end), 'g', 'LineWidth',3);
-    plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',3);
+    plot(serialportObj.UserData.X(2:end), 'r', 'LineWidth',1);
+    plot(serialportObj.UserData.Y(2:end), 'g', 'LineWidth',1);
+    plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',1);
     
     drawnow;
     

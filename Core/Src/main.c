@@ -82,9 +82,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
-float KALMAN_X(float U);
-float KALMAN_Y(float U);
-float KALMAN_Z(float U);
+void KALMAN(float U, float *P, float *U_hat, float *K);
+float KALMAN_test(float U);
 
 /* USER CODE BEGIN PFP */
 
@@ -99,6 +98,20 @@ float KALMAN_Z(float U);
   * @brief  The application entry point.
   * @retval int
   */
+/*
+ * Kalman Filter Variables
+ */
+float P_x_a = 0;
+float U_hat_x_a = 0;
+float K_x_a = 0;
+
+float P_y_a = 0;
+float U_hat_y_a = 0;
+float K_y_a = 0;
+
+float P_z_a = 0;
+float U_hat_z_a = 0;
+float K_z_a = 0;
 int main(void)
 {
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -281,6 +294,7 @@ int main(void)
 	HAL_StatusTypeDef OUTZ_H_M_status = 0x00;
 
 
+
 	/*
 	 * Start up
 	 */
@@ -300,8 +314,6 @@ int main(void)
 			int16_t arr_x_a[sample_a];
 			int16_t arr_y_a[sample_a];
 			int16_t arr_z_a[sample_a];
-			int16_t arr_kalman_x[sample_a];
-			int16_t arr_kalman_x_2[sample_a];
 			for (int i=0;i<sample_a;i++) {
 
 				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
@@ -366,16 +378,19 @@ int main(void)
 			/*
 			 * Kalman Filter
 			 */
-			avg_x_a = KALMAN_X(avg_x_a);
-			avg_y_a = KALMAN_Y(avg_y_a);
-			avg_z_a = KALMAN_Z(avg_z_a);
+
+
+			KALMAN(avg_x_a, &P_x_a, &U_hat_x_a, &K_x_a);
+			KALMAN(avg_y_a, &P_y_a, &U_hat_y_a, &K_y_a);
+			KALMAN(avg_z_a, &P_z_a, &U_hat_z_a, &K_z_a);
+
 
 			/*
 			 * Serial
 			 */
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_x_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_y_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", avg_z_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_x_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a), 100); // @suppress("Float formatting support")
 
 		} else {
 
@@ -476,43 +491,20 @@ int main(void)
 	}
 }
 
-static float P_X = 0;
-static float U_hat_X = 0;
-static float K_X = 0;
-static float P_Y = 0;
-static float U_hat_Y = 0;
-static float K_Y = 0;
-static float P_Z = 0;
-static float U_hat_Z = 0;
-static float K_Z = 0;
 
-static const float R = 150;
+
+static const float R = 10;
 static const float H = 1.0;
-static float Q = 20;
+static float Q = 3;
 
-float KALMAN_X(float U) {
-	K_X = P_X*H/(H*P_X*H+R);
-	U_hat_X = U_hat_X+K_X*(U-H*U_hat_X);
-	P_X=(1-K_X*H)*P_X+Q;
-
-	return U_hat_X;
+void KALMAN(float U, float *P, float *U_hat, float *K) {
+	*K = (*P)*H/(H*(*P)*H+R);
+	*U_hat = (*U_hat)+(*K)*(U-H*(*U_hat));
+	*P=(1-(*K)*H)*(*P)+Q;
+	return;
 }
 
-float KALMAN_Y(float U) {
-	K_Y = P_Y*H/(H*P_Y*H+R);
-	U_hat_Y = U_hat_Y+K_Y*(U-H*U_hat_Y);
-	P_Y=(1-K_Y*H)*P_Y+Q;
 
-	return U_hat_Y;
-}
-
-float KALMAN_Z(float U) {
-	K_Z = P_Z*H/(H*P_Z*H+R);
-	U_hat_Z = U_hat_Z+K_Z*(U-H*U_hat_Z);
-	P_Z=(1-K_Z*H)*P_Z+Q;
-
-	return U_hat_Z;
-}
 
 
 /**
