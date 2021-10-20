@@ -114,6 +114,7 @@ float U_hat_z_a = 0;
 float K_z_a = 0;
 int main(void)
 {
+
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
 
@@ -299,12 +300,31 @@ int main(void)
 	 * Start up
 	 */
 	HAL_Delay(1000);
+
+	/*
+	 * Button De-bounce
+	 */
+	int pushed = 0;
+
+	/*
+	 * Calibration
+	 */
+	float cal_x = 0.0;
+	float cal_y = 0.0;
+	float cal_z = 0.0;
+
 	while (1)
 	{
 
 		//HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
 
 		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+		/*
+		 * Average
+		 */
+		float avg_x_a = 0;
+		float avg_y_a = 0;
+		float avg_z_a = 0;
 
 		if (STATUS_REG_A_status == HAL_OK && ((STATUS_REG_A_val & 0x08)>>3) == 1) {
 			/*
@@ -356,12 +376,7 @@ int main(void)
 
 			}
 
-			/*
-			 * Average
-			 */
-			float avg_x_a = 0;
-			float avg_y_a = 0;
-			float avg_z_a = 0;
+
 			for (int i=0;i<sample_a;i++) {
 				avg_x_a += arr_x_a[i];
 				avg_y_a += arr_y_a[i];
@@ -393,11 +408,27 @@ int main(void)
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a), 100); // @suppress("Float formatting support")
 			*/
+
 		} else {
 
 		}
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
+            pushed = 1;
+//            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+//            HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Button Pressed\n\r"), 100);
+            cal_x = avg_x_a;
+            cal_y = avg_y_a;
+            cal_z = avg_z_a;
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+        } else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
+            pushed = 0;
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
+        }
 
 }
+
+
+
 
 
 
