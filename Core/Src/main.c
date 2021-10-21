@@ -86,7 +86,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void KALMAN(float U, float *P, float *U_hat, float *K);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -98,6 +98,21 @@ static void MX_I2C1_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+/*
+ * Kalman Filter Variables
+ */
+float P_x_m = 0;
+float U_hat_x_m = 0;
+float K_x_m = 0;
+
+float P_y_m = 0;
+float U_hat_y_m = 0;
+float K_y_m = 0;
+
+float P_z_m = 0;
+float U_hat_z_m = 0;
+float K_z_m = 0;
+
 int main(void)
 {
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -230,7 +245,7 @@ int main(void)
 	 * Set Control Registers
 	 */
 	uint8_t CFG_REG_A_M_val = 0x8C;
-	uint8_t CFG_REG_B_M_val = 0x02;
+	uint8_t CFG_REG_B_M_val = 0x03;
 	uint8_t CFG_REG_C_M_val = 0x10;
 
 	HAL_StatusTypeDef CFG_REG_A_M_Status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_A_M, 1, &CFG_REG_A_M_val, 1, 50);
@@ -315,23 +330,23 @@ int main(void)
 				OUTZ_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTZ_H_REG_M, 1, &OUTZ_H_REG_M_val, 1, 50);
 
 				if (OUTX_L_M_status == HAL_OK && OUTX_H_M_status == HAL_OK) {
-					OUTX_M_val = OUTX_L_REG_M_val;
+					OUTX_M_val = OUTX_H_REG_M_val;
 					OUTX_M_val <<= 8;
-					OUTX_M_val |= OUTX_H_REG_M_val;
+					OUTX_M_val |= OUTX_L_REG_M_val;
 //					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: %05d  ", OUTX_M_val), 100);
 				}
 
 				if (OUTY_L_M_status == HAL_OK && OUTY_H_M_status == HAL_OK) {
-					OUTY_M_val = OUTY_L_REG_M_val;
+					OUTY_M_val = OUTY_H_REG_M_val;
 					OUTY_M_val <<= 8;
-					OUTY_M_val |= OUTZ_H_REG_M_val;
+					OUTY_M_val |= OUTY_L_REG_M_val;
 //					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: %05d  ", OUTY_M_val), 100);
 				}
 
 				if (OUTZ_L_M_status == HAL_OK && OUTZ_H_M_status == HAL_OK) {
-					OUTZ_M_val = OUTZ_L_REG_M_val;
+					OUTZ_M_val = OUTZ_H_REG_M_val;
 					OUTZ_M_val <<= 8;
-					OUTZ_M_val |= OUTZ_L_M_status;
+					OUTZ_M_val |= OUTZ_L_REG_M_val;
 //					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: %05d  \n\r", OUTZ_M_val), 100);
 				}
 				arr_x_m[i] = OUTX_M_val;
@@ -361,14 +376,22 @@ int main(void)
 			/*
 			 * Serial
 			 */
+			KALMAN(avg_x_m, &P_x_m, &U_hat_x_m, &K_x_m);
+			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
+			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
 
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
+
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_x_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_y_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_z_m), 100); // @suppress("Float formatting support")
 
 
 			float yaw = 0;
 			yaw = atan2f(avg_x_m, avg_y_m);
+
+			if(yaw <0) yaw += 2*PI;
+			// Correcting due to the addition of the declination angle
+			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
@@ -389,6 +412,20 @@ int main(void)
 
 	}
 }
+
+
+static const float R = 10;
+static const float H = 1.0;
+static float Q = 20;
+
+void KALMAN(float U, float *P, float *U_hat, float *K) {
+	*K = (*P)*H/(H*(*P)*H+R);
+	*U_hat = (*U_hat)+(*K)*(U-H*(*U_hat));
+	*P=(1-(*K)*H)*(*P)+Q;
+	return;
+}
+
+
 
 /**
   * @brief System Clock Configuration
