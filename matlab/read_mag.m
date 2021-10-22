@@ -10,10 +10,10 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("X",[], "Y",[], "Z",[], "A", [] ,"Count",1);
 
 figure(1);
-% xlim([0 200])
-% ylim([-1 1])
-axis equal
-view(3)
+xlim([0 200])
+ylim([-0 360])
+% axis equal
+% view(3)
 hold on
 title("Magnetometer");
 
@@ -31,13 +31,13 @@ function readSerialData(serialportObj,~)
 
     serialportObj.UserData.Count = serialportObj.UserData.Count + 1;
 
-    plot3(serialportObj.UserData.X(2:end), serialportObj.UserData.Y(2:end), serialportObj.UserData.Z(2:end));
+%     plot3(serialportObj.UserData.X(2:end), serialportObj.UserData.Y(2:end), serialportObj.UserData.Z(2:end));
 
 
 %     plot(serialportObj.UserData.X(2:end), 'r', 'LineWidth',2);
 %     plot(serialportObj.UserData.Y(2:end), 'g', 'LineWidth',2);
 %     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',2);
-%     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
+     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
     drawnow;
     
     if serialportObj.UserData.Count > 200
