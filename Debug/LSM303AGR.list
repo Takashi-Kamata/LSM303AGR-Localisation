@@ -2451,9 +2451,10 @@ int main(void)
 			float yaw = 0;
  80019a0:	f04f 0300 	mov.w	r3, #0
  80019a4:	f8c7 3108 	str.w	r3, [r7, #264]	; 0x108
-			yaw = atan2f(avg_x_m, avg_y_m);
+//			yaw = atan2f(avg_x_m, avg_y_m);
+			yaw = atan2f(avg_z_m, avg_y_m);
  80019a8:	edd7 0a45 	vldr	s1, [r7, #276]	; 0x114
- 80019ac:	ed97 0a49 	vldr	s0, [r7, #292]	; 0x124
+ 80019ac:	ed97 0a44 	vldr	s0, [r7, #272]	; 0x110
  80019b0:	f005 ff68 	bl	8007884 <atan2f>
  80019b4:	ed87 0a42 	vstr	s0, [r7, #264]	; 0x108
 

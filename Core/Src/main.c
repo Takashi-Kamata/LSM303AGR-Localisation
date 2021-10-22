@@ -387,7 +387,8 @@ int main(void)
 
 
 			float yaw = 0;
-			yaw = atan2f(avg_x_m, avg_y_m);
+//			yaw = atan2f(avg_x_m, avg_y_m);
+			yaw = atan2f(avg_z_m, avg_y_m);
 
 			if(yaw <0) yaw += 2*PI;
 			// Correcting due to the addition of the declination angle
