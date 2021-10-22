@@ -2516,6 +2516,7 @@ int main(void)
  8001a52:	f7ff f8c9 	bl	8000be8 <__aeabi_d2f>
  8001a56:	4603      	mov	r3, r0
  8001a58:	f8c7 3108 	str.w	r3, [r7, #264]	; 0x108
+
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
  8001a5c:	f8d7 0108 	ldr.w	r0, [r7, #264]	; 0x108
  8001a60:	f7fe fd92 	bl	8000588 <__aeabi_f2d>
@@ -2562,9 +2563,9 @@ int main(void)
 
 08001ad4 <KALMAN>:
 
-static const float R = 10;
+static const float R = 20;
 static const float H = 1.0;
-static float Q = 20;
+static float Q = 10;
 
 void KALMAN(float U, float *P, float *U_hat, float *K) {
  8001ad4:	b480      	push	{r7}
@@ -2585,7 +2586,7 @@ void KALMAN(float U, float *P, float *U_hat, float *K) {
  8001afc:	ee67 7a87 	vmul.f32	s15, s15, s14
  8001b00:	eeb7 7a00 	vmov.f32	s14, #112	; 0x3f800000  1.0
  8001b04:	ee67 7a87 	vmul.f32	s15, s15, s14
- 8001b08:	eeb2 7a04 	vmov.f32	s14, #36	; 0x41200000  10.0
+ 8001b08:	eeb3 7a04 	vmov.f32	s14, #52	; 0x41a00000  20.0
  8001b0c:	ee37 7a87 	vadd.f32	s14, s15, s14
  8001b10:	eec6 7a87 	vdiv.f32	s15, s13, s14
  8001b14:	683b      	ldr	r3, [r7, #0]

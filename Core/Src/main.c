@@ -393,6 +393,7 @@ int main(void)
 			// Correcting due to the addition of the declination angle
 			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
+
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
 
@@ -414,9 +415,9 @@ int main(void)
 }
 
 
-static const float R = 10;
+static const float R = 20;
 static const float H = 1.0;
-static float Q = 20;
+static float Q = 10;
 
 void KALMAN(float U, float *P, float *U_hat, float *K) {
 	*K = (*P)*H/(H*(*P)*H+R);
