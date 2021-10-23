@@ -386,11 +386,11 @@ int main(void)
 			/*
 			 * Serial
 			 */
-			/*
+
 			KALMAN(avg_x_m, &P_x_m, &U_hat_x_m, &K_x_m);
 			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
 			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
-			*/
+
 
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
@@ -406,7 +406,7 @@ int main(void)
 			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
 
-			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
+//			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
 
