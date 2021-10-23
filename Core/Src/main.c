@@ -101,6 +101,10 @@ void KALMAN(float U, float *P, float *U_hat, float *K);
 /*
  * Kalman Filter Variables
  */
+static const float R = 1.5;
+static const float H = 1.0;
+static float Q = 0;
+
 float P_x_m = 0;
 float U_hat_x_m = 0;
 float K_x_m = 0;
@@ -112,6 +116,12 @@ float K_y_m = 0;
 float P_z_m = 0;
 float U_hat_z_m = 0;
 float K_z_m = 0;
+
+float P_ANGLE_m = 0;
+float U_hat_ANGLE_m = 0;
+float K_ANGLE_m = 0;
+
+
 
 int main(void)
 {
@@ -376,14 +386,15 @@ int main(void)
 			/*
 			 * Serial
 			 */
+			/*
 			KALMAN(avg_x_m, &P_x_m, &U_hat_x_m, &K_x_m);
 			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
 			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
+			*/
 
-
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_x_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_y_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", U_hat_z_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
 
 
 			float yaw = 0;
@@ -395,6 +406,7 @@ int main(void)
 			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
 
+			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
 
@@ -416,9 +428,6 @@ int main(void)
 }
 
 
-static const float R = 20;
-static const float H = 1.0;
-static float Q = 10;
 
 void KALMAN(float U, float *P, float *U_hat, float *K) {
 	*K = (*P)*H/(H*(*P)*H+R);
