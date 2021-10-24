@@ -10,7 +10,7 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("X",[], "Y",[], "Z",[], "A", [] ,"Count",1);
 
 figure(1);
-xlim([0 200])
+xlim([0 300])
 ylim([-0 360])
 % axis equal
 % view(3)
@@ -23,9 +23,10 @@ function readSerialData(serialportObj,~)
     data = split(data,",");
     X = str2double(data);
     
-    serialportObj.UserData.X(end+1) = X(1);
-    serialportObj.UserData.Y(end+1) = X(2);
-    serialportObj.UserData.Z(end+1) = X(3);
+%     serialportObj.UserData.X(end+1) = X(1);
+%     serialportObj.UserData.Y(end+1) = X(2);
+%     serialportObj.UserData.Z(end+1) = X(3);
+    
     serialportObj.UserData.A(end+1) = X(4);
     X(4);
 
@@ -40,7 +41,7 @@ function readSerialData(serialportObj,~)
      plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
     drawnow;
     
-    if serialportObj.UserData.Count > 200
+    if serialportObj.UserData.Count > 300
         configureCallback(serialportObj, "off");
         legend("X", "Y", "Z");
         disp("Finished");
