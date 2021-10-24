@@ -101,9 +101,26 @@ void KALMAN(float U, float *P, float *U_hat, float *K);
 /*
  * Kalman Filter Variables
  */
+/*
 static const float R = 1.5;
 static const float H = 1.0;
 static float Q = 0;
+*/
+static const float R = 10;
+static const float H = 1.0;
+static float Q = 3;
+
+float P_x_a = 0;
+float U_hat_x_a = 0;
+float K_x_a = 0;
+
+float P_y_a = 0;
+float U_hat_y_a = 0;
+float K_y_a = 0;
+
+float P_z_a = 0;
+float U_hat_z_a = 0;
+float K_z_a = 0;
 
 float P_x_m = 0;
 float U_hat_x_m = 0;
@@ -309,10 +326,168 @@ int main(void)
 	 * Start up
 	 */
 	HAL_Delay(1000);
+
+	/*
+	* Button De-bounce
+	*/
+	int pushed = 0;
+
+	/*
+	 * Tick
+	 */
+	uint32_t prev_tick =  HAL_GetTick();
+	uint32_t current_tick =  HAL_GetTick();
+
+	/*
+	 * Step Count
+	 */
+	uint8_t start_count = 0;
+	uint8_t step_counting = 0;
+	uint16_t steps = 0;
+	uint32_t increase_prev = 0;
+
 	while (1)
 	{
 
 //		HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
+		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+		/*
+		 * Average
+		 */
+		float avg_x_a = 0;
+		float avg_y_a = 0;
+		float avg_z_a = 0;
+
+		if (STATUS_REG_A_status == HAL_OK && ((STATUS_REG_A_val & 0x08)>>3) == 1) {
+			/*
+			 * Sampling
+			 */
+			uint8_t sample_a = 5;
+			int16_t arr_x_a[sample_a];
+			int16_t arr_y_a[sample_a];
+			int16_t arr_z_a[sample_a];
+			for (int i=0;i<sample_a;i++) {
+
+				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+				while (((STATUS_REG_A_val & 0x08)>>3) != 1) {
+					STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
+				}
+				OUT_X_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_L_A, 1, &OUT_X_L_A_val, 1, 50);
+				OUT_X_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_H_A, 1, &OUT_X_H_A_val, 1, 50);
+
+				OUT_Y_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Y_L_A, 1, &OUT_Y_L_A_val, 1, 50);
+				OUT_Y_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Y_H_A, 1, &OUT_Y_H_A_val, 1, 50);
+
+				OUT_Z_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Z_L_A, 1, &OUT_Z_L_A_val, 1, 50);
+				OUT_Z_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Z_H_A, 1, &OUT_Z_H_A_val, 1, 50);
+
+				if (OUT_X_L_A_status == HAL_OK && OUT_X_H_A_status == HAL_OK) {
+					OUT_X_A_val = OUT_X_H_A_val;
+					OUT_X_A_val <<= 8;
+					OUT_X_A_val |= OUT_X_L_A_val;
+					OUT_X_A_val >>= 6;
+				}
+
+				if (OUT_Y_L_A_status == HAL_OK && OUT_Y_H_A_status == HAL_OK) {
+					OUT_Y_A_val = OUT_Y_H_A_val;
+					OUT_Y_A_val <<= 8;
+					OUT_Y_A_val |= OUT_Y_L_A_val;
+					OUT_Y_A_val >>= 6;
+				}
+
+				if (OUT_Z_L_A_status == HAL_OK && OUT_Z_H_A_status == HAL_OK) {
+					OUT_Z_A_val = OUT_Z_H_A_val;
+					OUT_Z_A_val <<= 8;
+					OUT_Z_A_val |= OUT_Z_L_A_val;
+					OUT_Z_A_val >>= 6;
+				}
+				arr_x_a[i] = (OUT_X_A_val);
+				arr_y_a[i] = (OUT_Y_A_val);
+				arr_z_a[i] = (OUT_Z_A_val);
+
+
+			}
+
+
+			for (int i=0;i<sample_a;i++) {
+				avg_x_a += arr_x_a[i];
+				avg_y_a += arr_y_a[i];
+				avg_z_a += arr_z_a[i];
+			}
+
+			/*
+			 * Calculation
+			 */
+			avg_x_a = (avg_x_a / sample_a) * (4.0 / 1023);
+			avg_y_a = (avg_y_a / sample_a) * (4.0 / 1023);
+			avg_z_a = (avg_z_a / sample_a) * (4.0 / 1023);
+
+			/*
+			 * Kalman Filter
+			 */
+
+
+			KALMAN(avg_x_a, &P_x_a, &U_hat_x_a, &K_x_a);
+			KALMAN(avg_y_a, &P_y_a, &U_hat_y_a, &K_y_a);
+			KALMAN(avg_z_a, &P_z_a, &U_hat_z_a, &K_z_a);
+
+
+			/*
+			 * Serial
+			 */
+			/*
+			 * MATLAB
+			 */
+			/*
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_x_a - cal_x), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a - cal_y), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a - cal_z), 100); // @suppress("Float formatting support")
+			*/
+			current_tick = HAL_GetTick();
+
+			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 500) {
+				step_counting = 1;
+				increase_prev = HAL_GetTick();
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
+			}
+			if (step_counting == 1 && U_hat_x_a < -0.5) {
+				step_counting = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
+				steps++;
+			}
+			prev_tick = current_tick;
+		} else {
+
+
+		}
+
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
+			pushed = 1;
+			if (start_count == 0) {
+				steps = 0;
+				start_count = 1;
+				increase_prev = HAL_GetTick();
+			} else if (start_count == 1) {
+				start_count = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
+
+			}
+
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
+			pushed = 0;
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
+		}
+
+
+
+
+
+
+
+		/*
+		 * Magnetometer
+		 */
 
 		STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
 
@@ -391,11 +566,11 @@ int main(void)
 			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
 			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
 
-
+			/*
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
-
+			*/
 
 			float yaw = 0;
 //			yaw = atan2f(avg_x_m, avg_y_m);
@@ -407,7 +582,7 @@ int main(void)
 			yaw = yaw * 180.0/PI;
 
 //			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
+//			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
 
 			/*
@@ -422,7 +597,7 @@ int main(void)
 		/*
 		 * Wait
 		 */
-		HAL_Delay(100);
+		HAL_Delay(10);
 
 	}
 }
