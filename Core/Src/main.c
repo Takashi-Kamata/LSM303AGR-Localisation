@@ -335,7 +335,6 @@ int main(void)
 	/*
 	 * Tick
 	 */
-	uint32_t prev_tick =  HAL_GetTick();
 	uint32_t current_tick =  HAL_GetTick();
 
 	/*
@@ -345,6 +344,12 @@ int main(void)
 	uint8_t step_counting = 0;
 	uint16_t steps = 0;
 	uint32_t increase_prev = 0;
+
+	/*
+	 * Orientation
+	 */
+	float initial_yaw = 0;
+	float yaw = 0;
 
 	while (1)
 	{
@@ -445,41 +450,20 @@ int main(void)
 			*/
 			current_tick = HAL_GetTick();
 
-			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 500) {
+			if (U_hat_x_a > -0.55 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
 				step_counting = 1;
 				increase_prev = HAL_GetTick();
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
 			}
-			if (step_counting == 1 && U_hat_x_a < -0.5) {
+			if (step_counting == 1 && U_hat_x_a < -0.55) {
 				step_counting = 0;
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
 				steps++;
 			}
-			prev_tick = current_tick;
 		} else {
 
 
 		}
-
-		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
-			pushed = 1;
-			if (start_count == 0) {
-				steps = 0;
-				start_count = 1;
-				increase_prev = HAL_GetTick();
-			} else if (start_count == 1) {
-				start_count = 0;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
-
-			}
-
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
-			pushed = 0;
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-		}
-
-
 
 
 
@@ -572,7 +556,7 @@ int main(void)
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
 			*/
 
-			float yaw = 0;
+
 //			yaw = atan2f(avg_x_m, avg_y_m);
 			yaw = atan2f(avg_z_m, avg_y_m);
 
@@ -590,9 +574,33 @@ int main(void)
 			 */
 //			float total = avg_x_m+avg_y_m+avg_z_m;
 //			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Total: % 06.5f Gauss \n\r", total), 100); // @suppress("Float formatting support")
-		} else {
-
 		}
+
+
+
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
+			pushed = 1;
+			if (start_count == 0) {
+				steps = 0;
+				start_count = 1;
+				increase_prev = HAL_GetTick();
+				initial_yaw = yaw;
+			} else if (start_count == 1) {
+				start_count = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
+				float turn = initial_yaw - yaw;
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned %f\n\r", turn), 100);
+
+			}
+
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
+			pushed = 0;
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
+		}
+
+
+
 
 		/*
 		 * Wait
