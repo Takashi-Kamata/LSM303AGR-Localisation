@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 #define PI 3.141592654
-#define MODE 1 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
+#define MODE 0 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
 
 /* USER CODE BEGIN PTD */
 #define ACC 0b0011001
