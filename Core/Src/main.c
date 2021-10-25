@@ -464,12 +464,12 @@ int main(void)
 			*/
 			current_tick = HAL_GetTick();
 
-			if (U_hat_x_a > -0.55 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
+			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 300) {
 				step_counting = 1;
 				increase_prev = HAL_GetTick();
 //				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
 			}
-			if (step_counting == 1 && U_hat_x_a < -0.55) {
+			if (step_counting == 1 && U_hat_x_a < -0.5) {
 				step_counting = 0;
 //				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
 				steps++;
@@ -559,7 +559,6 @@ int main(void)
 			/*
 			 * Serial
 			 */
-
 			KALMAN(avg_x_m, &P_x_m, &U_hat_x_m, &K_x_m);
 			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
 			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
@@ -581,7 +580,6 @@ int main(void)
 
 //			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
 //			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
-
 
 			/*
 			 * Total Gauss
@@ -608,7 +606,7 @@ int main(void)
 				float turn = initial_yaw - yaw;
 				float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
 				float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
-
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d,", steps), 100);
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
 				x_pos_prev = x_pos;

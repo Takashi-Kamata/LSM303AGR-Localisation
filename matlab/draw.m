@@ -23,19 +23,19 @@ x = [0];
 y = [0];
 
 function readSerialData(serialportObj,~)
-    step_length = 1.33
+    step_length = 1.33;
     data = readline(serialportObj);
     
     data = split(data,",");
     D = str2double(data);
     
-    serialportObj.UserData.Step(end+1) = D(1);
-    serialportObj.UserData.Angle(end+1) = D(2);
+    serialportObj.UserData.Step(end+1) = D(2);
+    serialportObj.UserData.Angle(end+1) = D(3);
     D
     global x
     global y
-    x(serialportObj.UserData.Count + 1) = D(1);
-    y(serialportObj.UserData.Count + 1) = D(2);
+    x(serialportObj.UserData.Count + 1) = D(2);
+    y(serialportObj.UserData.Count + 1) = D(3);
 
     serialportObj.UserData.Count = serialportObj.UserData.Count + 1;
     
