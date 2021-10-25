@@ -2465,11 +2465,11 @@ int main(void)
  80019f4:	f7ff f8f8 	bl	8000be8 <__aeabi_d2f>
  80019f8:	4603      	mov	r3, r0
  80019fa:	f8c7 3144 	str.w	r3, [r7, #324]	; 0x144
-//			avg_z_a = KALMAN_Z(avg_z_a);
 
 			/*
 			 * Serial
 			 */
+
 			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_x_a), 100); // @suppress("Float formatting support")
  80019fe:	f8d7 013c 	ldr.w	r0, [r7, #316]	; 0x13c
  8001a02:	f7fe fdc1 	bl	8000588 <__aeabi_f2d>
@@ -2547,8 +2547,8 @@ int main(void)
 			/*
 			 * Sampling
 			 */
-			uint8_t sample_m = 5;
- 8001ab0:	2305      	movs	r3, #5
+			uint8_t sample_m = 10;
+ 8001ab0:	230a      	movs	r3, #10
  8001ab2:	f887 30ea 	strb.w	r3, [r7, #234]	; 0xea
 			int16_t arr_x_m[sample_m];
  8001ab6:	f897 40ea 	ldrb.w	r4, [r7, #234]	; 0xea
@@ -2643,7 +2643,7 @@ int main(void)
 			for (int i=0;i<sample_m;i++) {
  8001bac:	2300      	movs	r3, #0
  8001bae:	f8c7 314c 	str.w	r3, [r7, #332]	; 0x14c
- 8001bb2:	e0fd      	b.n	8001db0 <main+0xe30>
+ 8001bb2:	e0fe      	b.n	8001db2 <main+0xe32>
 
 				STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
  8001bb4:	2332      	movs	r3, #50	; 0x32
@@ -2783,16 +2783,16 @@ int main(void)
  8001ce2:	f897 311a 	ldrb.w	r3, [r7, #282]	; 0x11a
  8001ce6:	2b00      	cmp	r3, #0
  8001ce8:	d112      	bne.n	8001d10 <main+0xd90>
-					OUTX_M_val = OUTX_L_REG_M_val;
- 8001cea:	f107 030b 	add.w	r3, r7, #11
+					OUTX_M_val = OUTX_H_REG_M_val;
+ 8001cea:	f107 030a 	add.w	r3, r7, #10
  8001cee:	781b      	ldrb	r3, [r3, #0]
  8001cf0:	f8a7 3132 	strh.w	r3, [r7, #306]	; 0x132
 					OUTX_M_val <<= 8;
  8001cf4:	f9b7 3132 	ldrsh.w	r3, [r7, #306]	; 0x132
  8001cf8:	021b      	lsls	r3, r3, #8
  8001cfa:	f8a7 3132 	strh.w	r3, [r7, #306]	; 0x132
-					OUTX_M_val |= OUTX_H_REG_M_val;
- 8001cfe:	f107 030a 	add.w	r3, r7, #10
+					OUTX_M_val |= OUTX_L_REG_M_val;
+ 8001cfe:	f107 030b 	add.w	r3, r7, #11
  8001d02:	781b      	ldrb	r3, [r3, #0]
  8001d04:	b21a      	sxth	r2, r3
  8001d06:	f8b7 3132 	ldrh.w	r3, [r7, #306]	; 0x132
@@ -2804,163 +2804,163 @@ int main(void)
 				if (OUTY_L_M_status == HAL_OK && OUTY_H_M_status == HAL_OK) {
  8001d10:	f897 3119 	ldrb.w	r3, [r7, #281]	; 0x119
  8001d14:	2b00      	cmp	r3, #0
- 8001d16:	d115      	bne.n	8001d44 <main+0xdc4>
+ 8001d16:	d116      	bne.n	8001d46 <main+0xdc6>
  8001d18:	f897 3118 	ldrb.w	r3, [r7, #280]	; 0x118
  8001d1c:	2b00      	cmp	r3, #0
- 8001d1e:	d111      	bne.n	8001d44 <main+0xdc4>
-					OUTY_M_val = OUTY_L_REG_M_val;
- 8001d20:	f107 0309 	add.w	r3, r7, #9
+ 8001d1e:	d112      	bne.n	8001d46 <main+0xdc6>
+					OUTY_M_val = OUTY_H_REG_M_val;
+ 8001d20:	f107 0308 	add.w	r3, r7, #8
  8001d24:	781b      	ldrb	r3, [r3, #0]
  8001d26:	f8a7 3134 	strh.w	r3, [r7, #308]	; 0x134
 					OUTY_M_val <<= 8;
  8001d2a:	f9b7 3134 	ldrsh.w	r3, [r7, #308]	; 0x134
  8001d2e:	021b      	lsls	r3, r3, #8
  8001d30:	f8a7 3134 	strh.w	r3, [r7, #308]	; 0x134
-					OUTY_M_val |= OUTZ_H_REG_M_val;
- 8001d34:	1dbb      	adds	r3, r7, #6
- 8001d36:	781b      	ldrb	r3, [r3, #0]
- 8001d38:	b21a      	sxth	r2, r3
- 8001d3a:	f8b7 3134 	ldrh.w	r3, [r7, #308]	; 0x134
- 8001d3e:	4313      	orrs	r3, r2
- 8001d40:	f8a7 3134 	strh.w	r3, [r7, #308]	; 0x134
+					OUTY_M_val |= OUTY_L_REG_M_val;
+ 8001d34:	f107 0309 	add.w	r3, r7, #9
+ 8001d38:	781b      	ldrb	r3, [r3, #0]
+ 8001d3a:	b21a      	sxth	r2, r3
+ 8001d3c:	f8b7 3134 	ldrh.w	r3, [r7, #308]	; 0x134
+ 8001d40:	4313      	orrs	r3, r2
+ 8001d42:	f8a7 3134 	strh.w	r3, [r7, #308]	; 0x134
 //					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: %05d  ", OUTY_M_val), 100);
 				}
 
 				if (OUTZ_L_M_status == HAL_OK && OUTZ_H_M_status == HAL_OK) {
- 8001d44:	f897 3117 	ldrb.w	r3, [r7, #279]	; 0x117
- 8001d48:	2b00      	cmp	r3, #0
- 8001d4a:	d114      	bne.n	8001d76 <main+0xdf6>
- 8001d4c:	f897 3116 	ldrb.w	r3, [r7, #278]	; 0x116
- 8001d50:	2b00      	cmp	r3, #0
- 8001d52:	d110      	bne.n	8001d76 <main+0xdf6>
-					OUTZ_M_val = OUTZ_L_REG_M_val;
- 8001d54:	1dfb      	adds	r3, r7, #7
- 8001d56:	781b      	ldrb	r3, [r3, #0]
- 8001d58:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
+ 8001d46:	f897 3117 	ldrb.w	r3, [r7, #279]	; 0x117
+ 8001d4a:	2b00      	cmp	r3, #0
+ 8001d4c:	d114      	bne.n	8001d78 <main+0xdf8>
+ 8001d4e:	f897 3116 	ldrb.w	r3, [r7, #278]	; 0x116
+ 8001d52:	2b00      	cmp	r3, #0
+ 8001d54:	d110      	bne.n	8001d78 <main+0xdf8>
+					OUTZ_M_val = OUTZ_H_REG_M_val;
+ 8001d56:	1dbb      	adds	r3, r7, #6
+ 8001d58:	781b      	ldrb	r3, [r3, #0]
+ 8001d5a:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
 					OUTZ_M_val <<= 8;
- 8001d5c:	f9b7 3136 	ldrsh.w	r3, [r7, #310]	; 0x136
- 8001d60:	021b      	lsls	r3, r3, #8
- 8001d62:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
-					OUTZ_M_val |= OUTZ_L_M_status;
- 8001d66:	f897 3117 	ldrb.w	r3, [r7, #279]	; 0x117
- 8001d6a:	b21a      	sxth	r2, r3
- 8001d6c:	f8b7 3136 	ldrh.w	r3, [r7, #310]	; 0x136
- 8001d70:	4313      	orrs	r3, r2
- 8001d72:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
+ 8001d5e:	f9b7 3136 	ldrsh.w	r3, [r7, #310]	; 0x136
+ 8001d62:	021b      	lsls	r3, r3, #8
+ 8001d64:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
+					OUTZ_M_val |= OUTZ_L_REG_M_val;
+ 8001d68:	1dfb      	adds	r3, r7, #7
+ 8001d6a:	781b      	ldrb	r3, [r3, #0]
+ 8001d6c:	b21a      	sxth	r2, r3
+ 8001d6e:	f8b7 3136 	ldrh.w	r3, [r7, #310]	; 0x136
+ 8001d72:	4313      	orrs	r3, r2
+ 8001d74:	f8a7 3136 	strh.w	r3, [r7, #310]	; 0x136
 //					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: %05d  \n\r", OUTZ_M_val), 100);
 				}
 				arr_x_m[i] = OUTX_M_val;
- 8001d76:	f8d7 30e0 	ldr.w	r3, [r7, #224]	; 0xe0
- 8001d7a:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
- 8001d7e:	f8b7 1132 	ldrh.w	r1, [r7, #306]	; 0x132
- 8001d82:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
+ 8001d78:	f8d7 30e0 	ldr.w	r3, [r7, #224]	; 0xe0
+ 8001d7c:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
+ 8001d80:	f8b7 1132 	ldrh.w	r1, [r7, #306]	; 0x132
+ 8001d84:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
 				arr_y_m[i] = OUTY_M_val;
- 8001d86:	f8d7 30d8 	ldr.w	r3, [r7, #216]	; 0xd8
- 8001d8a:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
- 8001d8e:	f8b7 1134 	ldrh.w	r1, [r7, #308]	; 0x134
- 8001d92:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
+ 8001d88:	f8d7 30d8 	ldr.w	r3, [r7, #216]	; 0xd8
+ 8001d8c:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
+ 8001d90:	f8b7 1134 	ldrh.w	r1, [r7, #308]	; 0x134
+ 8001d94:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
 				arr_z_m[i] = OUTZ_M_val;
- 8001d96:	f8d7 30d0 	ldr.w	r3, [r7, #208]	; 0xd0
- 8001d9a:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
- 8001d9e:	f8b7 1136 	ldrh.w	r1, [r7, #310]	; 0x136
- 8001da2:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
+ 8001d98:	f8d7 30d0 	ldr.w	r3, [r7, #208]	; 0xd0
+ 8001d9c:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
+ 8001da0:	f8b7 1136 	ldrh.w	r1, [r7, #310]	; 0x136
+ 8001da4:	f823 1012 	strh.w	r1, [r3, r2, lsl #1]
 			for (int i=0;i<sample_m;i++) {
- 8001da6:	f8d7 314c 	ldr.w	r3, [r7, #332]	; 0x14c
- 8001daa:	3301      	adds	r3, #1
- 8001dac:	f8c7 314c 	str.w	r3, [r7, #332]	; 0x14c
- 8001db0:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
- 8001db4:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
- 8001db8:	429a      	cmp	r2, r3
- 8001dba:	f6ff aefb 	blt.w	8001bb4 <main+0xc34>
+ 8001da8:	f8d7 314c 	ldr.w	r3, [r7, #332]	; 0x14c
+ 8001dac:	3301      	adds	r3, #1
+ 8001dae:	f8c7 314c 	str.w	r3, [r7, #332]	; 0x14c
+ 8001db2:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
+ 8001db6:	f8d7 214c 	ldr.w	r2, [r7, #332]	; 0x14c
+ 8001dba:	429a      	cmp	r2, r3
+ 8001dbc:	f6ff aefa 	blt.w	8001bb4 <main+0xc34>
 			}
 
 			/*
 			 * Average
 			 */
 			float avg_x_m = 0;
- 8001dbe:	f04f 0300 	mov.w	r3, #0
- 8001dc2:	f8c7 3150 	str.w	r3, [r7, #336]	; 0x150
+ 8001dc0:	f04f 0300 	mov.w	r3, #0
+ 8001dc4:	f8c7 3150 	str.w	r3, [r7, #336]	; 0x150
 			float avg_y_m = 0;
- 8001dc6:	f04f 0300 	mov.w	r3, #0
- 8001dca:	f8c7 3154 	str.w	r3, [r7, #340]	; 0x154
+ 8001dc8:	f04f 0300 	mov.w	r3, #0
+ 8001dcc:	f8c7 3154 	str.w	r3, [r7, #340]	; 0x154
 			float avg_z_m = 0;
- 8001dce:	f04f 0300 	mov.w	r3, #0
- 8001dd2:	f8c7 3158 	str.w	r3, [r7, #344]	; 0x158
+ 8001dd0:	f04f 0300 	mov.w	r3, #0
+ 8001dd4:	f8c7 3158 	str.w	r3, [r7, #344]	; 0x158
 			for (int i=0;i<sample_m;i++) {
- 8001dd6:	2300      	movs	r3, #0
- 8001dd8:	f8c7 315c 	str.w	r3, [r7, #348]	; 0x15c
- 8001ddc:	e034      	b.n	8001e48 <main+0xec8>
+ 8001dd8:	2300      	movs	r3, #0
+ 8001dda:	f8c7 315c 	str.w	r3, [r7, #348]	; 0x15c
+ 8001dde:	e034      	b.n	8001e4a <main+0xeca>
 				avg_x_m += arr_x_m[i];
- 8001dde:	f8d7 30e0 	ldr.w	r3, [r7, #224]	; 0xe0
- 8001de2:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
- 8001de6:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
- 8001dea:	ee07 3a90 	vmov	s15, r3
- 8001dee:	eef8 7ae7 	vcvt.f32.s32	s15, s15
- 8001df2:	ed97 7a54 	vldr	s14, [r7, #336]	; 0x150
- 8001df6:	ee77 7a27 	vadd.f32	s15, s14, s15
- 8001dfa:	edc7 7a54 	vstr	s15, [r7, #336]	; 0x150
+ 8001de0:	f8d7 30e0 	ldr.w	r3, [r7, #224]	; 0xe0
+ 8001de4:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
+ 8001de8:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
+ 8001dec:	ee07 3a90 	vmov	s15, r3
+ 8001df0:	eef8 7ae7 	vcvt.f32.s32	s15, s15
+ 8001df4:	ed97 7a54 	vldr	s14, [r7, #336]	; 0x150
+ 8001df8:	ee77 7a27 	vadd.f32	s15, s14, s15
+ 8001dfc:	edc7 7a54 	vstr	s15, [r7, #336]	; 0x150
 				avg_y_m += arr_y_m[i];
- 8001dfe:	f8d7 30d8 	ldr.w	r3, [r7, #216]	; 0xd8
- 8001e02:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
- 8001e06:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
- 8001e0a:	ee07 3a90 	vmov	s15, r3
- 8001e0e:	eef8 7ae7 	vcvt.f32.s32	s15, s15
- 8001e12:	ed97 7a55 	vldr	s14, [r7, #340]	; 0x154
- 8001e16:	ee77 7a27 	vadd.f32	s15, s14, s15
- 8001e1a:	edc7 7a55 	vstr	s15, [r7, #340]	; 0x154
+ 8001e00:	f8d7 30d8 	ldr.w	r3, [r7, #216]	; 0xd8
+ 8001e04:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
+ 8001e08:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
+ 8001e0c:	ee07 3a90 	vmov	s15, r3
+ 8001e10:	eef8 7ae7 	vcvt.f32.s32	s15, s15
+ 8001e14:	ed97 7a55 	vldr	s14, [r7, #340]	; 0x154
+ 8001e18:	ee77 7a27 	vadd.f32	s15, s14, s15
+ 8001e1c:	edc7 7a55 	vstr	s15, [r7, #340]	; 0x154
 				avg_z_m += arr_z_m[i];
- 8001e1e:	f8d7 30d0 	ldr.w	r3, [r7, #208]	; 0xd0
- 8001e22:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
- 8001e26:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
- 8001e2a:	ee07 3a90 	vmov	s15, r3
- 8001e2e:	eef8 7ae7 	vcvt.f32.s32	s15, s15
- 8001e32:	ed97 7a56 	vldr	s14, [r7, #344]	; 0x158
- 8001e36:	ee77 7a27 	vadd.f32	s15, s14, s15
- 8001e3a:	edc7 7a56 	vstr	s15, [r7, #344]	; 0x158
+ 8001e20:	f8d7 30d0 	ldr.w	r3, [r7, #208]	; 0xd0
+ 8001e24:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
+ 8001e28:	f933 3012 	ldrsh.w	r3, [r3, r2, lsl #1]
+ 8001e2c:	ee07 3a90 	vmov	s15, r3
+ 8001e30:	eef8 7ae7 	vcvt.f32.s32	s15, s15
+ 8001e34:	ed97 7a56 	vldr	s14, [r7, #344]	; 0x158
+ 8001e38:	ee77 7a27 	vadd.f32	s15, s14, s15
+ 8001e3c:	edc7 7a56 	vstr	s15, [r7, #344]	; 0x158
 			for (int i=0;i<sample_m;i++) {
- 8001e3e:	f8d7 315c 	ldr.w	r3, [r7, #348]	; 0x15c
- 8001e42:	3301      	adds	r3, #1
- 8001e44:	f8c7 315c 	str.w	r3, [r7, #348]	; 0x15c
- 8001e48:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
- 8001e4c:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
- 8001e50:	429a      	cmp	r2, r3
- 8001e52:	dbc4      	blt.n	8001dde <main+0xe5e>
+ 8001e40:	f8d7 315c 	ldr.w	r3, [r7, #348]	; 0x15c
+ 8001e44:	3301      	adds	r3, #1
+ 8001e46:	f8c7 315c 	str.w	r3, [r7, #348]	; 0x15c
+ 8001e4a:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
+ 8001e4e:	f8d7 215c 	ldr.w	r2, [r7, #348]	; 0x15c
+ 8001e52:	429a      	cmp	r2, r3
+ 8001e54:	dbc4      	blt.n	8001de0 <main+0xe60>
 			}
 
 			/*
 			 * Calculation
 			 */
 			avg_x_m = (avg_x_m / sample_m) * (100.0/65536);
- 8001e54:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
- 8001e58:	ee07 3a90 	vmov	s15, r3
- 8001e5c:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
- 8001e60:	edd7 6a54 	vldr	s13, [r7, #336]	; 0x150
- 8001e64:	eec6 7a87 	vdiv.f32	s15, s13, s14
- 8001e68:	ed9f 7a15 	vldr	s14, [pc, #84]	; 8001ec0 <main+0xf40>
- 8001e6c:	ee67 7a87 	vmul.f32	s15, s15, s14
- 8001e70:	edc7 7a54 	vstr	s15, [r7, #336]	; 0x150
+ 8001e56:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
+ 8001e5a:	ee07 3a90 	vmov	s15, r3
+ 8001e5e:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
+ 8001e62:	edd7 6a54 	vldr	s13, [r7, #336]	; 0x150
+ 8001e66:	eec6 7a87 	vdiv.f32	s15, s13, s14
+ 8001e6a:	ed9f 7a15 	vldr	s14, [pc, #84]	; 8001ec0 <main+0xf40>
+ 8001e6e:	ee67 7a87 	vmul.f32	s15, s15, s14
+ 8001e72:	edc7 7a54 	vstr	s15, [r7, #336]	; 0x150
 			avg_y_m = (avg_y_m / sample_m) * (100.0/65536);
- 8001e74:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
- 8001e78:	ee07 3a90 	vmov	s15, r3
- 8001e7c:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
- 8001e80:	edd7 6a55 	vldr	s13, [r7, #340]	; 0x154
- 8001e84:	eec6 7a87 	vdiv.f32	s15, s13, s14
- 8001e88:	ed9f 7a0d 	vldr	s14, [pc, #52]	; 8001ec0 <main+0xf40>
- 8001e8c:	ee67 7a87 	vmul.f32	s15, s15, s14
- 8001e90:	edc7 7a55 	vstr	s15, [r7, #340]	; 0x154
+ 8001e76:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
+ 8001e7a:	ee07 3a90 	vmov	s15, r3
+ 8001e7e:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
+ 8001e82:	edd7 6a55 	vldr	s13, [r7, #340]	; 0x154
+ 8001e86:	eec6 7a87 	vdiv.f32	s15, s13, s14
+ 8001e8a:	ed9f 7a0d 	vldr	s14, [pc, #52]	; 8001ec0 <main+0xf40>
+ 8001e8e:	ee67 7a87 	vmul.f32	s15, s15, s14
+ 8001e92:	edc7 7a55 	vstr	s15, [r7, #340]	; 0x154
 			avg_z_m = (avg_z_m / sample_m) * (100.0/65536);
- 8001e94:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
- 8001e98:	ee07 3a90 	vmov	s15, r3
- 8001e9c:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
- 8001ea0:	edd7 6a56 	vldr	s13, [r7, #344]	; 0x158
- 8001ea4:	eec6 7a87 	vdiv.f32	s15, s13, s14
- 8001ea8:	ed9f 7a05 	vldr	s14, [pc, #20]	; 8001ec0 <main+0xf40>
- 8001eac:	ee67 7a87 	vmul.f32	s15, s15, s14
- 8001eb0:	edc7 7a56 	vstr	s15, [r7, #344]	; 0x158
- 8001eb4:	46ad      	mov	sp, r5
+ 8001e96:	f897 30ea 	ldrb.w	r3, [r7, #234]	; 0xea
+ 8001e9a:	ee07 3a90 	vmov	s15, r3
+ 8001e9e:	eeb8 7ae7 	vcvt.f32.s32	s14, s15
+ 8001ea2:	edd7 6a56 	vldr	s13, [r7, #344]	; 0x158
+ 8001ea6:	eec6 7a87 	vdiv.f32	s15, s13, s14
+ 8001eaa:	ed9f 7a05 	vldr	s14, [pc, #20]	; 8001ec0 <main+0xf40>
+ 8001eae:	ee67 7a87 	vmul.f32	s15, s15, s14
+ 8001eb2:	edc7 7a56 	vstr	s15, [r7, #344]	; 0x158
+ 8001eb6:	46ad      	mov	sp, r5
 		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
- 8001eb6:	f7ff bafe 	b.w	80014b6 <main+0x536>
- 8001eba:	bf00      	nop
+ 8001eb8:	f7ff bafd 	b.w	80014b6 <main+0x536>
  8001ebc:	20000204 	.word	0x20000204
  8001ec0:	3ac80000 	.word	0x3ac80000
 
