@@ -366,9 +366,9 @@ int main(void)
 			/*
 			 * Kalman Filter
 			 */
-			avg_x_a = KALMAN_X(avg_x_a);
-			avg_y_a = KALMAN_Y(avg_y_a);
-			avg_z_a = KALMAN_Z(avg_z_a);
+//			avg_x_a = KALMAN_X(avg_x_a);
+//			avg_y_a = KALMAN_Y(avg_y_a);
+//			avg_z_a = KALMAN_Z(avg_z_a);
 
 			/*
 			 * Serial
