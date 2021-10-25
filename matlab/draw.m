@@ -10,8 +10,8 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("Step",[], "Angle",[], "Count",1);
 
 figure(1);
-xlim([-10, 10])
-ylim([-10, 10])
+xlim([-50, 50])
+ylim([-50, 50])
 % axis equal
 % % view(3)
 hold on
@@ -47,8 +47,6 @@ function readSerialData(serialportObj,~)
 %     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',2);
 %     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
 %     drawnow;
-    x 
-    y
     plot(x, y, "-");
     drawnow;
     if serialportObj.UserData.Count > 8
