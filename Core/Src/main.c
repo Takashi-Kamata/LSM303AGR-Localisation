@@ -138,7 +138,10 @@ float P_ANGLE_m = 0;
 float U_hat_ANGLE_m = 0;
 float K_ANGLE_m = 0;
 
-
+/*
+ * Step length
+ */
+float step_length = 1.33;//in meter
 
 int main(void)
 {
@@ -351,6 +354,17 @@ int main(void)
 	float initial_yaw = 0;
 	float yaw = 0;
 
+	/*
+	 * Init button
+	 */
+	uint8_t first_pochi = 0;
+
+	/*
+	 * Previous Coord
+	 */
+	float x_pos_prev = 0;
+	float y_pos_prev = 0;
+
 	while (1)
 	{
 
@@ -453,11 +467,11 @@ int main(void)
 			if (U_hat_x_a > -0.55 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
 				step_counting = 1;
 				increase_prev = HAL_GetTick();
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
 			}
 			if (step_counting == 1 && U_hat_x_a < -0.55) {
 				step_counting = 0;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
 				steps++;
 			}
 		} else {
@@ -558,7 +572,7 @@ int main(void)
 
 
 //			yaw = atan2f(avg_x_m, avg_y_m);
-			yaw = atan2f(avg_z_m, avg_y_m);
+			yaw = atan2f(U_hat_z_m, U_hat_y_m);
 
 			if(yaw <0) yaw += 2*PI;
 			// Correcting due to the addition of the declination angle
@@ -584,13 +598,28 @@ int main(void)
 				steps = 0;
 				start_count = 1;
 				increase_prev = HAL_GetTick();
-				initial_yaw = yaw;
+				if (first_pochi == 0) {
+					initial_yaw = yaw;
+					first_pochi = 1;
+				}
+
 			} else if (start_count == 1) {
 				start_count = 0;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
 				float turn = initial_yaw - yaw;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned %f\n\r", turn), 100);
+				float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
+				float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
 
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
+				x_pos_prev = x_pos;
+				y_pos_prev = y_pos;
+
+
+
+//				initial_yaw = yaw;
+				start_count = 1;
+				steps = 0;
+				increase_prev = HAL_GetTick();
 			}
 
 			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
