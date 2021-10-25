@@ -160,6 +160,10 @@ int main(void)
 	__HAL_RCC_I2C1_CLK_ENABLE();
 	char aTxBuffer[16];
 	char clear[7] = "\x1B[2J";
+	/*
+	 * Start LED ON
+	 */
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
 
 	/*
 	* Clear console
@@ -211,18 +215,22 @@ int main(void)
 
 	if (CTRL_REG1_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG1:  %d\n\r", CTRL_REG1_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	if (CTRL_REG2_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG2:  %d\n\r", CTRL_REG2_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	if (CTRL_REG3_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG3:  %d\n\r", CTRL_REG3_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	if (CTRL_REG4_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG4:  %d\n\r", CTRL_REG4_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	/*
@@ -284,14 +292,17 @@ int main(void)
 
 	if (CFG_REG_A_M_Status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG1:  %d\n\r", CFG_REG_A_M_Status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	if (CFG_REG_B_M_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG2:  %d\n\r", CFG_REG_B_M_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	if (CFG_REG_C_M_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG3:  %d\n\r", CFG_REG_C_M_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
 	}
 
 	/*
@@ -352,6 +363,8 @@ int main(void)
 	 * Orientation
 	 */
 	float initial_yaw = 0;
+	uint8_t offset_measure = 0;
+	float offset = 11.9758333333;
 	float yaw = 0;
 
 	/*
@@ -445,11 +458,11 @@ int main(void)
 			 * Kalman Filter
 			 */
 
-
+			/*
 			KALMAN(avg_x_a, &P_x_a, &U_hat_x_a, &K_x_a);
 			KALMAN(avg_y_a, &P_y_a, &U_hat_y_a, &K_y_a);
 			KALMAN(avg_z_a, &P_z_a, &U_hat_z_a, &K_z_a);
-
+			*/
 
 			/*
 			 * Serial
@@ -464,15 +477,41 @@ int main(void)
 			*/
 			current_tick = HAL_GetTick();
 
-			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 300) {
+			if (avg_x_a > -0.70 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
 				step_counting = 1;
 				increase_prev = HAL_GetTick();
 //				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
+
 			}
-			if (step_counting == 1 && U_hat_x_a < -0.5) {
+			if (step_counting == 1 && avg_x_a < -0.70) {
 				step_counting = 0;
 //				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
-				steps++;
+				if (offset_measure == 0) {
+					float turn = initial_yaw - yaw;
+					float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
+					float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d,", steps), 100);
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", turn), 100);
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", initial_yaw - yaw - offset), 100);
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
+					x_pos_prev = x_pos;
+					y_pos_prev = y_pos;
+					steps++;
+				}
+				if (offset_measure == 1 && steps < 10) {
+					float turn = initial_yaw - yaw;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Measuring %d\n\r", steps), 100);
+					offset += turn;
+					steps++;
+				} else if (offset_measure == 1 && steps == 10) {
+					offset = offset / 10;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Offset calculated %f\n\r", offset), 100);
+					offset_measure = 0;
+					steps = 0;
+				}
+
+
 			}
 		} else {
 
@@ -493,7 +532,7 @@ int main(void)
 			/*
 			 * Sampling
 			 */
-			uint8_t sample_m = 5;
+			uint8_t sample_m = 10;
 			int16_t arr_x_m[sample_m];
 			int16_t arr_y_m[sample_m];
 			int16_t arr_z_m[sample_m];
@@ -571,7 +610,7 @@ int main(void)
 
 
 //			yaw = atan2f(avg_x_m, avg_y_m);
-			yaw = atan2f(U_hat_z_m, U_hat_y_m);
+			yaw = atan2f( avg_y_m, avg_z_m);
 
 			if(yaw <0) yaw += 2*PI;
 			// Correcting due to the addition of the declination angle
@@ -592,6 +631,18 @@ int main(void)
 
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {
 			pushed = 1;
+			initial_yaw = yaw;
+			offset_measure = 1;
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Initialising\n\r"), 100);
+			steps = 0;
+			start_count = 1;
+			increase_prev = HAL_GetTick();
+			x_pos_prev = 0;
+			y_pos_prev = 0;
+
+
+
+			/*
 			if (start_count == 0) {
 				steps = 0;
 				start_count = 1;
@@ -602,37 +653,37 @@ int main(void)
 				}
 
 			} else if (start_count == 1) {
-				start_count = 0;
-				float turn = initial_yaw - yaw;
-				float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
-				float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d,", steps), 100);
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
-				x_pos_prev = x_pos;
-				y_pos_prev = y_pos;
+//				float turn = initial_yaw - yaw;
+//				float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
+//				float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d,", steps), 100);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
+//				x_pos_prev = x_pos;
+//				y_pos_prev = y_pos;
 
 
 
 //				initial_yaw = yaw;
-				start_count = 1;
+				start_count = 0;
 				steps = 0;
 				increase_prev = HAL_GetTick();
-			}
+			}*/
 
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+
+
 		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
 			pushed = 0;
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
+
 		}
 
 
 
 
-		/*
-		 * Wait
-		 */
-		HAL_Delay(10);
+//		/*
+//		 * Wait
+//		 */
+//		HAL_Delay(10);
 
 	}
 }

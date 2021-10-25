@@ -1,7 +1,7 @@
-main.c:146:5:main	440	dynamic
-main.c:642:6:KALMAN	24	static
-main.c:655:6:SystemClock_Config	88	static
-main.c:701:13:MX_I2C1_Init	8	static
-main.c:735:13:MX_USART2_UART_Init	8	static
-main.c:768:13:MX_GPIO_Init	48	static
-main.c:804:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:146:5:main	448	dynamic
+main.c:693:6:KALMAN	24	static
+main.c:706:6:SystemClock_Config	88	static
+main.c:752:13:MX_I2C1_Init	8	static
+main.c:786:13:MX_USART2_UART_Init	8	static
+main.c:819:13:MX_GPIO_Init	48	static
+main.c:855:6:Error_Handler	4	static,ignoring_inline_asm

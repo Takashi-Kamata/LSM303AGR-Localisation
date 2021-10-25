@@ -29,13 +29,13 @@ function readSerialData(serialportObj,~)
     data = split(data,",");
     D = str2double(data);
     
-    serialportObj.UserData.Step(end+1) = D(2);
-    serialportObj.UserData.Angle(end+1) = D(3);
+%     serialportObj.UserData.Step(end+1) = D(4);
+%     serialportObj.UserData.Angle(end+1) = D(5);
     D
     global x
     global y
-    x(serialportObj.UserData.Count + 1) = D(2);
-    y(serialportObj.UserData.Count + 1) = D(3);
+    x(serialportObj.UserData.Count + 1) = D(4);
+    y(serialportObj.UserData.Count + 1) = D(5);
 
     serialportObj.UserData.Count = serialportObj.UserData.Count + 1;
     
@@ -51,7 +51,7 @@ function readSerialData(serialportObj,~)
     y
     plot(x, y, "-");
     drawnow;
-    if serialportObj.UserData.Count > 5
+    if serialportObj.UserData.Count > 8
         
         configureCallback(serialportObj, "off");
         disp("Finished");
