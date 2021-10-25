@@ -348,6 +348,9 @@ int main(void)
 	/*
 	 * Orientation
 	 */
+	float u = 0;
+	float v = 0;
+	float w = 0;
 	float initial_yaw = 0;
 	float yaw = 0;
 
@@ -557,8 +560,34 @@ int main(void)
 			*/
 
 
+
 //			yaw = atan2f(avg_x_m, avg_y_m);
-			yaw = atan2f(avg_z_m, avg_y_m);
+			//yaw = atan2f(U_hat_z_m, U_hat_y_m);
+			float norm = 1 / sqrtf(U_hat_x_m * U_hat_x_m + U_hat_y_m * U_hat_y_m + U_hat_z_m * U_hat_z_m);
+			float norm_x = U_hat_x_m * norm;
+			float norm_y = U_hat_y_m * norm;
+			float norm_z = U_hat_z_m * norm;
+
+			float v1 = v * norm_z - w * norm_y;
+			float v2 = w * norm_x - u * norm_z;
+			float v3 = u * norm_y - v * norm_x;
+
+			float c = 1 / (1 + u * norm_x + v * norm_y + w * norm_z);
+
+			float r_11 = 1 - (v3 * v3 + v2 * v2) * c;
+			float r_21 = v3 + (v2 * v1) * c;
+			float r_31 = - v2 + (v1 * v3) * c;
+			float r_32 = v1 + (v2 * v3) * c;
+			float r_33 = 1 - (v2 * v2 + v1 * v1) * c;
+
+			float theta_x = atan2f(r_32, r_33)*180/PI;
+			float theta_y = atan2f(-r_31, sqrtf(r_32 * r_32 + r_33 * r_33))*180/PI;
+			float theta_z = atan2f(r_21, r_11)*180/PI;
+
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", theta_x), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", theta_y), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f\n", theta_z), 100); // @suppress("Float formatting support")
+
 
 			if(yaw <0) yaw += 2*PI;
 			// Correcting due to the addition of the declination angle
@@ -585,11 +614,15 @@ int main(void)
 				start_count = 1;
 				increase_prev = HAL_GetTick();
 				initial_yaw = yaw;
+				float norm = 1 / sqrtf(U_hat_x_m * U_hat_x_m + U_hat_y_m * U_hat_y_m + U_hat_z_m * U_hat_z_m);
+				u = U_hat_x_m * norm;
+				v = U_hat_y_m * norm;
+				w = U_hat_z_m * norm;
 			} else if (start_count == 1) {
 				start_count = 0;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
+				//HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Steps %d\n\r", steps), 100);
 				float turn = initial_yaw - yaw;
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned %f\n\r", turn), 100);
+				//HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned %f\n\r", turn), 100);
 
 			}
 
