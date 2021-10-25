@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 #define PI 3.141592654
-#define MODE 0 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
+#define MODE 1 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
 
 /* USER CODE BEGIN PTD */
 #define ACC 0b0011001
@@ -107,9 +107,9 @@ static const float R = 1.5;
 static const float H = 1.0;
 static float Q = 0;
 */
-static const float R = 0.4;
+static const float R = 0.3;
 static const float H = 1.0;
-static float Q = 3;
+static float Q = 0.2;
 
 float P_x_a = 0;
 float U_hat_x_a = 0;
@@ -142,7 +142,7 @@ float K_ANGLE_m = 0;
 /*
  * Step length
  */
-float step_length = 0.7;//in meter
+float step_length = 1.1;//in meter
 
 int main(void)
 {
@@ -515,7 +515,7 @@ int main(void)
 				increase_prev = HAL_GetTick();
 //				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
 			} else if (avg_x_a > -0.70 && step_counting == 0 && (current_tick - increase_prev) > 300 && ready_to_send == 1) {
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Missed Step\n\r"), 100);
+//				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Missed Step\n\r"), 100);
 			}
 			if (step_counting == 1 && avg_x_a < -0.70) {
 				step_counting = 0;
@@ -529,9 +529,9 @@ int main(void)
 				ready_to_send = 0;
 				if (offset_measure == 0) {
 					float turn = initial_yaw - yaw - offset;
-					float temp_angle = abs(turn - turn_prev);
-					if (temp_angle > 20) {
-						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned\n\r"), 100);
+					float temp_angle = fabs(turn - turn_prev);
+					if (temp_angle > 30) {
+//						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Turned\n\r"), 100);
 						for (int i = 0; i<sizeof(angles)/sizeof(float); i++) {
 							angles[i] = 0;// Re-initialise
 						}
@@ -559,8 +559,9 @@ int main(void)
 //					for (int j =0; j < 5;j++) {
 //						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Angle %f\n\r", angles[j]), 100);
 //					}
-					float x_pos = x_pos_prev + step_length * steps * cos(turn * PI/180);
-					float y_pos = y_pos_prev + step_length * steps * sin(turn * PI/180);
+					float x_pos = x_pos_prev + step_length * 1 * cos(turn * PI/180);
+					float y_pos = y_pos_prev + step_length * 1 * sin(turn * PI/180);
+
 					if (MODE == 0) {
 						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Step : %03d, ", steps), 100);
 						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Heading : % 06.3f degrees,", angle_avg), 100);
@@ -578,7 +579,7 @@ int main(void)
 
 				}else if (offset_measure == 1 && (steps) <= 4) {
 					float turn = initial_yaw - yaw;
-					if (abs(turn) > 30) {
+					if (fabs(turn) > 20) {
 						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Something went wrong, re-init\n\r"), 100);
 					}
 
@@ -593,6 +594,7 @@ int main(void)
 					offset_measure = 0;
 					steps = 0;
 					offset_avg_count = 0;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Ready\n\r"), 100);
 				}
 
 
@@ -695,13 +697,13 @@ int main(void)
 //			yaw = atan2f( avg_y_m, avg_z_m);
 			yaw = atan2f( U_hat_y_m, U_hat_z_m);
 
-			if(yaw <0) yaw += 2*PI;
-			// Correcting due to the addition of the declination angle
-			if(yaw > 2*PI)yaw -= 2*PI;
+//			if(yaw <0) yaw += 2*PI;
+//			// Correcting due to the addition of the declination angle
+//			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
 
 //			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
-//			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
+//			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n\r", yaw), 100);
 
 			/*
 			 * Total Gauss
@@ -717,15 +719,17 @@ int main(void)
 			for (int i = 0; i<sizeof(angles)/sizeof(float); i++) {
 				angles[i] = 0;//initialise
 			}
+			offset_avg_count = 0;
 			pushed = 1;
 			initial_yaw = yaw;
 			offset_measure = 1;
 			if (MODE == 0) {
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Initialising\n\r"), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "*Initialising\n\r"), 100);
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Initial Yaw %f\n\r", initial_yaw), 100);
 			}
 			steps = 0;
 			increase_prev = HAL_GetTick();
+			offset = 0;
 			x_pos_prev = 0;
 			y_pos_prev = 0;
 			if (MODE == 0) {
@@ -739,7 +743,7 @@ int main(void)
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary x is %f\n\r", stationary_x), 100);
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary y is %f\n\r", stationary_y), 100);
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary z is %f\n\r", stationary_z), 100);
-				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Do 10steps don't move forward\n\r"), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Do 4 steps don't move forward\n\r"), 100);
 			}
 
 		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {

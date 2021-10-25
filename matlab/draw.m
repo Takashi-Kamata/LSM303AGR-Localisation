@@ -10,8 +10,8 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("Step",[], "Angle",[], "Count",1);
 
 figure(1);
-xlim([-50, 50])
-ylim([-50, 50])
+xlim([-7, 7])
+ylim([-7, 7])
 % axis equal
 % % view(3)
 hold on
@@ -23,7 +23,7 @@ x = [0];
 y = [0];
 
 function readSerialData(serialportObj,~)
-    data = readline(serialportObj);
+    data = readline(serialportObj)
     
     data = split(data,",");
     D = str2double(data);
@@ -48,7 +48,7 @@ function readSerialData(serialportObj,~)
 %     drawnow;
     plot(x, y, "-", 'LineWidth',2);
     drawnow;
-    if serialportObj.UserData.Count > 20
+    if serialportObj.UserData.Count > 60
         
         configureCallback(serialportObj, "off");
         disp("Finished");
