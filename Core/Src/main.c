@@ -109,7 +109,7 @@ static float Q = 0;
 */
 static const float R = 0.3;
 static const float H = 1.0;
-static float Q = 0.2;
+static float Q = 3;
 
 float P_x_a = 0;
 float U_hat_x_a = 0;
