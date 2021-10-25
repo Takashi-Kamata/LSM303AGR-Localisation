@@ -15,7 +15,7 @@ ylim([-50, 50])
 % axis equal
 % % view(3)
 hold on
-title("Magnetometer");
+title("2D Map");
 
 global x
 global y
@@ -23,7 +23,6 @@ x = [0];
 y = [0];
 
 function readSerialData(serialportObj,~)
-    step_length = 1.33;
     data = readline(serialportObj);
     
     data = split(data,",");
@@ -34,8 +33,8 @@ function readSerialData(serialportObj,~)
     D
     global x
     global y
-    x(serialportObj.UserData.Count + 1) = D(4);
-    y(serialportObj.UserData.Count + 1) = D(5);
+    x(serialportObj.UserData.Count + 1) = D(1);
+    y(serialportObj.UserData.Count + 1) = D(2);
 
     serialportObj.UserData.Count = serialportObj.UserData.Count + 1;
     
@@ -47,9 +46,9 @@ function readSerialData(serialportObj,~)
 %     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',2);
 %     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
 %     drawnow;
-    plot(x, y, "-");
+    plot(x, y, "-", 'LineWidth',2);
     drawnow;
-    if serialportObj.UserData.Count > 8
+    if serialportObj.UserData.Count > 20
         
         configureCallback(serialportObj, "off");
         disp("Finished");
