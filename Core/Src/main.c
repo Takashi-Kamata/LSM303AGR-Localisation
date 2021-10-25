@@ -421,12 +421,12 @@ int main(void)
 			*/
 			current_tick = HAL_GetTick();
 
-			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 500) {
+			if (U_hat_x_a > -0.75 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
 				step_counting = 1;
 				increase_prev = HAL_GetTick();
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "UP\n\r"), 100);
 			}
-			if (step_counting == 1 && U_hat_x_a < -0.5) {
+			if (step_counting == 1 && U_hat_x_a < -0.75) {
 				step_counting = 0;
 				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "DOWN\n\r"), 100);
 				steps++;

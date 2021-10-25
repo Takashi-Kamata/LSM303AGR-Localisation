@@ -2468,10 +2468,10 @@ int main(void)
  800199c:	f000 fcae 	bl	80022fc <HAL_GetTick>
  80019a0:	f8c7 00e4 	str.w	r0, [r7, #228]	; 0xe4
 
-			if (U_hat_x_a > -0.5 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 500) {
+			if (U_hat_x_a > -0.75 && start_count == 1 && step_counting == 0 && (current_tick - increase_prev) > 400) {
  80019a4:	4b55      	ldr	r3, [pc, #340]	; (8001afc <main+0xb7c>)
  80019a6:	edd3 7a00 	vldr	s15, [r3]
- 80019aa:	eebe 7a00 	vmov.f32	s14, #224	; 0xbf000000 -0.5
+ 80019aa:	eebe 7a08 	vmov.f32	s14, #232	; 0xbf400000 -0.750
  80019ae:	eef4 7ac7 	vcmpe.f32	s15, s14
  80019b2:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
  80019b6:	dd24      	ble.n	8001a02 <main+0xa82>
@@ -2484,7 +2484,7 @@ int main(void)
  80019c8:	f8d7 20e4 	ldr.w	r2, [r7, #228]	; 0xe4
  80019cc:	f8d7 3124 	ldr.w	r3, [r7, #292]	; 0x124
  80019d0:	1ad3      	subs	r3, r2, r3
- 80019d2:	f5b3 7ffa 	cmp.w	r3, #500	; 0x1f4
+ 80019d2:	f5b3 7fc8 	cmp.w	r3, #400	; 0x190
  80019d6:	d914      	bls.n	8001a02 <main+0xa82>
 				step_counting = 1;
  80019d8:	2301      	movs	r3, #1
@@ -2504,13 +2504,13 @@ int main(void)
  80019fc:	4848      	ldr	r0, [pc, #288]	; (8001b20 <main+0xba0>)
  80019fe:	f002 fdfe 	bl	80045fe <HAL_UART_Transmit>
 			}
-			if (step_counting == 1 && U_hat_x_a < -0.5) {
+			if (step_counting == 1 && U_hat_x_a < -0.75) {
  8001a02:	f897 312b 	ldrb.w	r3, [r7, #299]	; 0x12b
  8001a06:	2b01      	cmp	r3, #1
  8001a08:	d11f      	bne.n	8001a4a <main+0xaca>
  8001a0a:	4b3c      	ldr	r3, [pc, #240]	; (8001afc <main+0xb7c>)
  8001a0c:	edd3 7a00 	vldr	s15, [r3]
- 8001a10:	eebe 7a00 	vmov.f32	s14, #224	; 0xbf000000 -0.5
+ 8001a10:	eebe 7a08 	vmov.f32	s14, #232	; 0xbf400000 -0.750
  8001a14:	eef4 7ac7 	vcmpe.f32	s15, s14
  8001a18:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
  8001a1c:	d515      	bpl.n	8001a4a <main+0xaca>
