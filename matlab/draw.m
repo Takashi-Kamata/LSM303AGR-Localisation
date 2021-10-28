@@ -10,8 +10,8 @@ serialportObj.Parity = "odd";
 serialportObj.UserData = struct("Step",[], "Angle",[], "Count",1);
 
 figure(1);
-xlim([-7, 7])
-ylim([-7, 7])
+xlim([-20, 20])
+ylim([-20, 20])
 % axis equal
 % % view(3)
 hold on

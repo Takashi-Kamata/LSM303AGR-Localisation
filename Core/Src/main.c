@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 #define PI 3.141592654
-#define MODE 0 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
+#define MODE 1 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
 
 /* USER CODE BEGIN PTD */
 #define ACC 0b0011001
@@ -142,7 +142,7 @@ float K_ANGLE_m = 0;
 /*
  * Step length
  */
-float step_length = 1.1;//in meter
+float step_length = 0.7;//in meter
 
 int main(void)
 {
