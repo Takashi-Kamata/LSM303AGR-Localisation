@@ -30,7 +30,7 @@ function readSerialData(serialportObj,~)
     
 %     serialportObj.UserData.Step(end+1) = D(4);
 %     serialportObj.UserData.Angle(end+1) = D(5);
-    D
+%     D
     global x
     global y
     x(serialportObj.UserData.Count + 1) = D(1);
