@@ -46,7 +46,7 @@ function readSerialData(serialportObj,~)
 %     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',2);
 %     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
 %     drawnow;
-    plot(x, y, "-", 'LineWidth',2);
+    plot(x, y, "-", 'LineWidth',8);
     drawnow;
     if serialportObj.UserData.Count > 60
         
