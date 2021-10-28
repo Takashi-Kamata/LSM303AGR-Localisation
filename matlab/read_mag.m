@@ -1,6 +1,6 @@
 clc;clear;clf;clear serialportObj;
 
-serialportObj = serialport("/dev/cu.usbmodem1413203",115200);
+serialportObj = serialport("/dev/cu.usbmodem14203",115200);
 
 configureCallback(serialportObj,"terminator",@readSerialData);
 
@@ -36,14 +36,14 @@ function readSerialData(serialportObj,~)
 
 
 %     plot(serialportObj.UserData.X(2:end), 'r', 'LineWidth',2);
-%     plot(serialportObj.UserData.Y(2:end), 'g', 'LineWidth',2);
-%     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',2);
-     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',2);
+%     plot(serialportObj.UserData.Y(2:end), 'g', 'LineWidth',2)
+     plot(serialportObj.UserData.Z(2:end), 'b', 'LineWidth',1);
+     plot(serialportObj.UserData.A(2:end), 'r', 'LineWidth',1);
     drawnow;
     
     if serialportObj.UserData.Count > 300
         configureCallback(serialportObj, "off");
-        legend("X", "Y", "Z");
+%         legend("X", "Y", "Z");
         disp("Finished");
         clear serialportObj;
     end

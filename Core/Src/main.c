@@ -101,9 +101,9 @@ void KALMAN(float U, float *P, float *U_hat, float *K);
 /*
  * Kalman Filter Variables
  */
-static const float R = 1.5;
+static const float R = 0.3;
 static const float H = 1.0;
-static float Q = 0;
+static float Q = 5;
 
 float P_x_m = 0;
 float U_hat_x_m = 0;
@@ -392,9 +392,6 @@ int main(void)
 			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
 
 
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
 
 
 			float yaw = 0;
@@ -406,7 +403,20 @@ int main(void)
 			if(yaw > 2*PI)yaw -= 2*PI;
 			yaw = yaw * 180.0/PI;
 
+			float yaw2 = 0;
+			//			yaw = atan2f(avg_x_m, avg_y_m);
+			yaw2 = atan2f(U_hat_z_m, U_hat_y_m);
+
+			if(yaw2 <0) yaw2 += 2*PI;
+			// Correcting due to the addition of the declination angle
+			if(yaw2 > 2*PI)yaw2 -= 2*PI;
+			yaw2 = yaw2 * 180.0/PI;
+
 //			KALMAN(yaw, &P_ANGLE_m, &U_hat_ANGLE_m, &K_ANGLE_m);
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f,", yaw2), 100); // @suppress("Float formatting support")
+
 			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%f\n", yaw), 100);
 
 
