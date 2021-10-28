@@ -20,14 +20,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include <stdio.h>
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
+#include <math.h>
 
 /* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
+#define PI 3.141592654
+#define MODE 1 //MODE 0 -> CONSOLE. MODE 1 -> MATLAB
+
+/*
+ * Registers
+ */
 #define ACC 0b0011001
 #define WHO_AM_I_A 0x0F
 #define CTRL_REG1_A 0x20
@@ -57,25 +58,9 @@
 #define OUTZ_L_REG_M 0x6C
 #define OUTZ_H_REG_M 0x6D
 
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart2;
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -83,35 +68,43 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 void KALMAN(float U, float *P, float *U_hat, float *K);
-float KALMAN_test(float U);
 
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 /*
  * Kalman Filter Variables
  */
-float P_x_a = 0;
-float U_hat_x_a = 0;
-float K_x_a = 0;
+static const float R = 0.3; //Observation noise
+static const float H = 1.0; //Observation model
+static float Q = 3; //Process noise
 
-float P_y_a = 0;
-float U_hat_y_a = 0;
-float K_y_a = 0;
+//Magnetomer X Axis
+//Prediction
+float P_x_m = 0;
+//Updated
+float U_hat_x_m = 0;
+//Kalman Constant
+float K_x_m = 0;
 
-float P_z_a = 0;
-float U_hat_z_a = 0;
-float K_z_a = 0;
+//Magnetomer Y Axis
+//Prediction
+float P_y_m = 0;
+//Updated
+float U_hat_y_m = 0;
+//Kalman Constant
+float K_y_m = 0;
+
+//Magnetomer Z Axis
+//Prediction
+float P_z_m = 0;
+//Updated
+float U_hat_z_m = 0;
+//Kalman Constant
+float K_z_m = 0;
+
+/*
+ * Step length
+ */
+float step_length = 0.7;//in meter
+
 int main(void)
 {
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -127,8 +120,13 @@ int main(void)
 
 	/* USER CODE BEGIN 2 */
 	__HAL_RCC_I2C1_CLK_ENABLE();
-	char aTxBuffer[16];
-	char clear[7] = "\x1B[2J";
+	char aTxBuffer[16];//Buffer for UART string
+	char clear[7] = "\x1B[2J";//Clear Console Command (macOS Terminal)
+
+	/*
+	 * Start LED ON
+	 */
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);//Signals the system is on
 
 	/*
 	* Clear console
@@ -138,7 +136,7 @@ int main(void)
 	/*
 	 * I2C SCANNER
 	 */
-	HAL_UART_Transmit(&huart2,  (uint8_t*)"Scanning\n\r", 11, 100);
+	HAL_UART_Transmit(&huart2,  (uint8_t*)"I2C Scan\n\r", 11, 100);
 	for (uint8_t i = 0; i < 128; i++) {
 		if (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(i<<1), 3, 5) == HAL_OK) {
 			HAL_UART_Transmit(&huart2, (uint8_t*)aTxBuffer, sprintf(aTxBuffer, "%d\n\r", i), 100);
@@ -150,20 +148,21 @@ int main(void)
 	 * Start up
 	 */
 	HAL_Delay(500);
+
 	/*
-	 * Accelerometer
+	 * *************************************** Accelerometer Start Up Sequence ***************************************
 	 */
 	/*
 	 * Check Communication from Accelerometer
 	 */
-	char acc_enabled[30] = "Accelerometer Enabled\n\r";
+	char acc_enabled[30] = "Accelerometer Enabled\n\r";// UART Buffer
 	uint8_t who_am_i_a_val;
-	HAL_StatusTypeDef who_am_i_a_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1 , WHO_AM_I_A, 1, &who_am_i_a_val, 1, 50);
+	HAL_StatusTypeDef who_am_i_a_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1 , WHO_AM_I_A, 1, &who_am_i_a_val, 1, 50);// Read WHOAMI
 	char ACC_Buffer[32];
-	if (who_am_i_a_status == HAL_OK && who_am_i_a_val == 51) {
-		HAL_UART_Transmit(&huart2, (uint8_t*)acc_enabled , sizeof(acc_enabled), 100);
+	if (who_am_i_a_status == HAL_OK && who_am_i_a_val == 51) {// Who Am I register check
+		HAL_UART_Transmit(&huart2, (uint8_t*)acc_enabled , sizeof(acc_enabled), 100);//OK
 	} else if (who_am_i_a_status != HAL_OK) {
-		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d\n\r", who_am_i_a_status), 100);
+		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%d\n\r", who_am_i_a_status), 100);//BAD
 	}
 	/*
 	 * Set Control Registers
@@ -173,25 +172,35 @@ int main(void)
 	uint8_t CTRL_REG3_A_val = 0x00;
 	uint8_t CTRL_REG4_A_val = 0x81;
 
+	/*
+	 * Set
+	 */
 	HAL_StatusTypeDef CTRL_REG1_A_status = HAL_I2C_Mem_Write(&hi2c1, (ACC<<1), CTRL_REG1_A, 1, &CTRL_REG1_A_val, 1, 50);
 	HAL_StatusTypeDef CTRL_REG2_A_status = HAL_I2C_Mem_Write(&hi2c1, (ACC<<1), CTRL_REG2_A, 1, &CTRL_REG2_A_val, 1, 50);
 	HAL_StatusTypeDef CTRL_REG3_A_status = HAL_I2C_Mem_Write(&hi2c1, (ACC<<1), CTRL_REG3_A, 1, &CTRL_REG3_A_val, 1, 50);
 	HAL_StatusTypeDef CTRL_REG4_A_status = HAL_I2C_Mem_Write(&hi2c1, (ACC<<1), CTRL_REG4_A, 1, &CTRL_REG4_A_val, 1, 50);
 
+	/*
+	 * Check if successful
+	 */
 	if (CTRL_REG1_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG1:  %d\n\r", CTRL_REG1_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	if (CTRL_REG2_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG2:  %d\n\r", CTRL_REG2_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	if (CTRL_REG3_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG3:  %d\n\r", CTRL_REG3_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	if (CTRL_REG4_A_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Failed REG4:  %d\n\r", CTRL_REG4_A_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	/*
@@ -226,41 +235,50 @@ int main(void)
 
 
 	/*
-	 * Magnetometer
+	 * *************************************** Magnetometer Start Up Sequence ***************************************
 	 */
 	/*
 	 * Check Communication from Magnetometer
 	 */
-	char mag_enabled[50] = "Magnetometer Enabled\n\r";
+	char mag_enabled[50] = "Magnetometer Enabled\n\r";//UART Buffer
 	uint8_t who_am_i_m_val;
-	HAL_StatusTypeDef who_am_i_m_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1 , WHO_AM_I_M, 1, &who_am_i_m_val, 1, 50);
+	HAL_StatusTypeDef who_am_i_m_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1 , WHO_AM_I_M, 1, &who_am_i_m_val, 1, 50);// Read WHOAMI
 	char MAG_Buffer[32];
-	if (who_am_i_m_status == HAL_OK && who_am_i_m_val == 64) {
-		HAL_UART_Transmit(&huart2, (uint8_t*)mag_enabled , sizeof(mag_enabled), 100);
+	if (who_am_i_m_status == HAL_OK && who_am_i_m_val == 64) {//Check WHO AM I register
+		HAL_UART_Transmit(&huart2, (uint8_t*)mag_enabled , sizeof(mag_enabled), 100);//OK
 	} else if (who_am_i_m_status != HAL_OK) {
-		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%d\n\r", who_am_i_m_status), 100);
+		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "%d\n\r", who_am_i_m_status), 100);//BAD
 	}
 	/*
 	 * Set Control Registers
 	 */
 	uint8_t CFG_REG_A_M_val = 0x8C;
-	uint8_t CFG_REG_B_M_val = 0x02;
+	uint8_t CFG_REG_B_M_val = 0x03;
 	uint8_t CFG_REG_C_M_val = 0x10;
 
+	/*
+	 * Set
+	 */
 	HAL_StatusTypeDef CFG_REG_A_M_Status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_A_M, 1, &CFG_REG_A_M_val, 1, 50);
 	HAL_StatusTypeDef CFG_REG_B_M_status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_B_M, 1, &CFG_REG_B_M_val, 1, 50);
 	HAL_StatusTypeDef CFG_REG_C_M_status = HAL_I2C_Mem_Write(&hi2c1, (MAG<<1), CFG_REG_C_M, 1, &CFG_REG_C_M_val, 1, 50);
 
+	/*
+	 * Check if successful
+	 */
 	if (CFG_REG_A_M_Status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG1:  %d\n\r", CFG_REG_A_M_Status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	if (CFG_REG_B_M_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG2:  %d\n\r", CFG_REG_B_M_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	if (CFG_REG_C_M_status != HAL_OK) {
 		HAL_UART_Transmit(&huart2,  (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Failed REG3:  %d\n\r", CFG_REG_C_M_status), 100);
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);//Turn off LED
 	}
 
 	/*
@@ -293,20 +311,82 @@ int main(void)
 	HAL_StatusTypeDef OUTZ_L_M_status = 0x00;
 	HAL_StatusTypeDef OUTZ_H_M_status = 0x00;
 
-
+	/*
+	* Button De-bounce
+	*/
+	int pushed = 0;
 
 	/*
-	 * Start up
+	 * Tick
 	 */
-	HAL_Delay(1000);
+	uint32_t current_tick =  HAL_GetTick();
+
+	/*
+	 * Step Detector Variables
+	 */
+	uint8_t step_counting = 0;
+	uint16_t steps = 0;
+	uint32_t increase_prev = 0;
+
+	/*
+	 * Orientation Variables
+	 */
+	float initial_yaw = 0;
+	uint8_t offset_measure = 0;
+	float offset = 11.9758333333;
+	float yaw = 0;
+
+	/*
+	 * Previous Coordinate
+	 */
+	float x_pos_prev = 0;
+	float y_pos_prev = 0;
+
+	/*
+	 * Send Coordinate Flag
+	 */
+	uint8_t ready_to_send = 0;
+
+	/*
+	 * Stationary G values (offset)
+	 */
+	float stationary_x = 0;
+	float stationary_y = 0;
+	float stationary_z = 0;
+
+	/*
+	 * Average Accelerometer Variables
+	 */
+	float avg_x_a = 0;
+	float avg_y_a = 0;
+	float avg_z_a = 0;
+	uint8_t offset_avg_count = 0;
+
+	/*
+	 * Average Magnetometer Variables
+	 */
+	float avg_x_m = 0;
+	float avg_y_m = 0;
+	float avg_z_m = 0;
+
+	/*
+	 * Moving Average - Angle Variables
+	 */
+	float angles[5];
+	float angle_avg;
+	for (int i = 0; i<sizeof(angles)/sizeof(float); i++) {
+		angles[i] = 0;//Initialise Array
+	}
+	float turn_prev = 0;
+	uint8_t angle_count = 0;
+
+	//Loop
 	while (1)
 	{
-
-		//HAL_UART_Transmit(&huart2,  (uint8_t*)clear, sizeof(clear), 100);
-
+		//Read if new data is available
 		STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
 
-		if (STATUS_REG_A_status == HAL_OK && ((STATUS_REG_A_val & 0x08)>>3) == 1) {
+		if (STATUS_REG_A_status == HAL_OK && ((STATUS_REG_A_val & 0x08)>>3) == 1) {//Yes
 			/*
 			 * Sampling
 			 */
@@ -314,12 +394,14 @@ int main(void)
 			int16_t arr_x_a[sample_a];
 			int16_t arr_y_a[sample_a];
 			int16_t arr_z_a[sample_a];
+			// Samples for five times
 			for (int i=0;i<sample_a;i++) {
-
 				STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
-				while (((STATUS_REG_A_val & 0x08)>>3) != 1) {
+				while (((STATUS_REG_A_val & 0x08)>>3) != 1) {// Wait until new values are ready
 					STATUS_REG_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, STATUS_REG_A, 1, &STATUS_REG_A_val, 1, 50);
 				}
+
+				// Store
 				OUT_X_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_L_A, 1, &OUT_X_L_A_val, 1, 50);
 				OUT_X_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_X_H_A, 1, &OUT_X_H_A_val, 1, 50);
 
@@ -329,6 +411,7 @@ int main(void)
 				OUT_Z_L_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Z_L_A, 1, &OUT_Z_L_A_val, 1, 50);
 				OUT_Z_H_A_status = HAL_I2C_Mem_Read(&hi2c1, (ACC<<1)|0x1, OUT_Z_H_A, 1, &OUT_Z_H_A_val, 1, 50);
 
+				// Bitwise operations X, Y, Z registers
 				if (OUT_X_L_A_status == HAL_OK && OUT_X_H_A_status == HAL_OK) {
 					OUT_X_A_val = OUT_X_H_A_val;
 					OUT_X_A_val <<= 8;
@@ -356,12 +439,7 @@ int main(void)
 
 			}
 
-			/*
-			 * Average
-			 */
-			float avg_x_a = 0;
-			float avg_y_a = 0;
-			float avg_z_a = 0;
+			//Averaging five samples
 			for (int i=0;i<sample_a;i++) {
 				avg_x_a += arr_x_a[i];
 				avg_y_a += arr_y_a[i];
@@ -369,50 +447,134 @@ int main(void)
 			}
 
 			/*
-			 * Calculation
+			 * Average Calculation
 			 */
 			avg_x_a = (avg_x_a / sample_a) * (4.0 / 1023);
 			avg_y_a = (avg_y_a / sample_a) * (4.0 / 1023);
 			avg_z_a = (avg_z_a / sample_a) * (4.0 / 1023);
 
 			/*
-			 * Kalman Filter
+			 * Serial Transmit (debug)
 			 */
+			/*
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_x_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", avg_y_a), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", avg_z_a), 100); // @suppress("Float formatting support")
+			*/
 
-
-			KALMAN(avg_x_a, &P_x_a, &U_hat_x_a, &K_x_a);
-			KALMAN(avg_y_a, &P_y_a, &U_hat_y_a, &K_y_a);
-			KALMAN(avg_z_a, &P_z_a, &U_hat_z_a, &K_z_a);
-
+			current_tick = HAL_GetTick();//Current tick
 
 			/*
-			 * Serial
+			 * Peak Detector
 			 */
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_x_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f,", U_hat_y_a), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "% 06.5f\n", U_hat_z_a), 100); // @suppress("Float formatting support")
+			if (avg_x_a > -0.70 && step_counting == 0 && (current_tick - increase_prev) > 400 && ready_to_send == 0) {//Wait for 400ms till next step
+				step_counting = 1;
+				increase_prev = HAL_GetTick();
+			}
+			if (step_counting == 1 && avg_x_a < -0.70) {
+				step_counting = 0;
+				ready_to_send = 1;
+				steps++;
+			}
+			if (avg_x_a > (stationary_x -0.028) && avg_x_a < (stationary_x + 0.028) && ready_to_send == 1 && step_counting == 0) {//Detect end of a step
+				ready_to_send = 0;
+				if (offset_measure == 0) {//If not in initialising stage
+					float turn = initial_yaw - yaw - offset;
+					/*
+					 * ***** MOVING AVERAGE CALCULATION *****
+					 */
+					float temp_angle = fabs(turn - turn_prev);
+					if (temp_angle > 30) {
+						for (int i = 0; i<sizeof(angles)/sizeof(float); i++) {
+							angles[i] = 0;// Re-initialise
+						}
+						angle_count = 0;
+					}
+					if (angle_count < 5) {
+						angles[angle_count] = turn;
+						angle_count++;
+					}
+					if (angle_count == 5) {
+					    for(int i=5-1;i>0;i--)
+					    {
+					    	angles[i]=angles[i-1];
+					    }
+					    angles[0] = turn;
+					}
+					angle_avg = 0;
+					for (int k=0; k<angle_count; k++) {
+						angle_avg += angles[k];
+					}
+					angle_avg = angle_avg / (angle_count);
 
-		} else {
+					/*
+					 * Calculate X and Y coordinate
+					 */
+					float x_pos = x_pos_prev + step_length * 1 * cos(turn * PI/180);
+					float y_pos = y_pos_prev + step_length * 1 * sin(turn * PI/180);
 
+					/*
+					 * Transmit
+					 */
+					if (MODE == 0) {//For Console
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Step : %03d, ", steps), 100);
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Heading : % 06.3f degrees,", angle_avg), 100);
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "X : % 06.3f meters,", y_pos), 100);
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Y : % 06.3f meters\n\r", x_pos), 100);
+					}
+					if (MODE == 1) {//For MATLAB
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f,", x_pos), 100);
+						HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "%f\n\r", y_pos), 100);
+					}
+
+					//Store previous positions
+					x_pos_prev = x_pos;
+					y_pos_prev = y_pos;
+					turn_prev = turn;
+
+				}else if (offset_measure == 1 && (steps) <= 4) {//In initialising stage
+					//Takes 5 samples initially and averages offset
+					float turn = initial_yaw - yaw;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Sample %d   Measuring %f\n\r", steps, turn), 100);
+					offset += turn;
+					offset_avg_count++;
+				} else if (offset_measure == 1 && (steps) >= 5) {//End of initialising stage
+					//Finished taking 5 samples
+					offset = offset/offset_avg_count;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Offset calculated %f\n\r", offset), 100);
+					//Initialise and ready for measurement
+					offset_measure = 0;
+					steps = 0;
+					offset_avg_count = 0;
+					HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Ready\n\r"), 100);
+				}
+			}
 		}
 
 
-		STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
+		/*
+		 * Magnetometer
+		 */
+
+		STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);//Read if new data is available
 
 		if (STATUS_REG_M_status == HAL_OK && ((STATUS_REG_M_val & 0x08)>>3) == 1) {
 			/*
 			 * Sampling
 			 */
-			uint8_t sample_m = 5;
+			uint8_t sample_m = 10;
 			int16_t arr_x_m[sample_m];
 			int16_t arr_y_m[sample_m];
 			int16_t arr_z_m[sample_m];
+			// Samples for ten times
 			for (int i=0;i<sample_m;i++) {
 
 				STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
-				while (((STATUS_REG_M_val & 0x08)>>3) != 1) {
+				while (((STATUS_REG_M_val & 0x08)>>3) != 1) {// Wait until new values are ready
 					STATUS_REG_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, STATUS_REG_M, 1, &STATUS_REG_M_val, 1, 50);
 				}
+
+				//Store
 				OUTX_L_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTX_L_REG_M, 1, &OUTX_L_REG_M_val, 1, 50);
 				OUTX_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTX_H_REG_M, 1, &OUTX_H_REG_M_val, 1, 50);
 
@@ -422,25 +584,23 @@ int main(void)
 				OUTZ_L_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTZ_L_REG_M, 1, &OUTZ_L_REG_M_val, 1, 50);
 				OUTZ_H_M_status = HAL_I2C_Mem_Read(&hi2c1, (MAG<<1)|0x1, OUTZ_H_REG_M, 1, &OUTZ_H_REG_M_val, 1, 50);
 
+				// Bitwise operations X, Y, Z registers
 				if (OUTX_L_M_status == HAL_OK && OUTX_H_M_status == HAL_OK) {
-					OUTX_M_val = OUTX_L_REG_M_val;
+					OUTX_M_val = OUTX_H_REG_M_val;
 					OUTX_M_val <<= 8;
-					OUTX_M_val |= OUTX_H_REG_M_val;
-//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: %05d  ", OUTX_M_val), 100);
+					OUTX_M_val |= OUTX_L_REG_M_val;
 				}
 
 				if (OUTY_L_M_status == HAL_OK && OUTY_H_M_status == HAL_OK) {
-					OUTY_M_val = OUTY_L_REG_M_val;
+					OUTY_M_val = OUTY_H_REG_M_val;
 					OUTY_M_val <<= 8;
-					OUTY_M_val |= OUTZ_H_REG_M_val;
-//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: %05d  ", OUTY_M_val), 100);
+					OUTY_M_val |= OUTY_L_REG_M_val;
 				}
 
 				if (OUTZ_L_M_status == HAL_OK && OUTZ_H_M_status == HAL_OK) {
-					OUTZ_M_val = OUTZ_L_REG_M_val;
+					OUTZ_M_val = OUTZ_H_REG_M_val;
 					OUTZ_M_val <<= 8;
-					OUTZ_M_val |= OUTZ_L_M_status;
-//					HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: %05d  \n\r", OUTZ_M_val), 100);
+					OUTZ_M_val |= OUTZ_L_REG_M_val;
 				}
 				arr_x_m[i] = OUTX_M_val;
 				arr_y_m[i] = OUTY_M_val;
@@ -448,11 +608,8 @@ int main(void)
 			}
 
 			/*
-			 * Average
+			 * Averaging ten samples
 			 */
-			float avg_x_m = 0;
-			float avg_y_m = 0;
-			float avg_z_m = 0;
 			for (int i=0;i<sample_m;i++) {
 				avg_x_m += arr_x_m[i];
 				avg_y_m += arr_y_m[i];
@@ -460,50 +617,92 @@ int main(void)
 			}
 
 			/*
-			 * Calculation
+			 * Average Calculation
 			 */
 			avg_x_m = (avg_x_m / sample_m) * (100.0/65536);
 			avg_y_m = (avg_y_m / sample_m) * (100.0/65536);
 			avg_z_m = (avg_z_m / sample_m) * (100.0/65536);
 
-			/*
-			 * Serial
-			 */
-			/*
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "X: % 06.5f Gauss ", avg_x_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Y: % 06.5f Gauss ", avg_y_m), 100); // @suppress("Float formatting support")
-			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Z: % 06.5f Gauss  \n\r", avg_z_m), 100); // @suppress("Float formatting support")
-			*/
-			/*
-			 * Total Gauss
-			 */
-//			float total = avg_x_m+avg_y_m+avg_z_m;
-//			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "Total: % 06.5f Gauss \n\r", total), 100); // @suppress("Float formatting support")
-		} else {
 
+			/*
+			 * ***** KALMAN FILTER *****
+			 */
+			KALMAN(avg_x_m, &P_x_m, &U_hat_x_m, &K_x_m);
+			KALMAN(avg_y_m, &P_y_m, &U_hat_y_m, &K_y_m);
+			KALMAN(avg_z_m, &P_z_m, &U_hat_z_m, &K_z_m);
+
+			/*
+			 * Serial Transmit
+			 */
+			/*
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_x_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_y_m), 100); // @suppress("Float formatting support")
+			HAL_UART_Transmit(&huart2, (uint8_t*)MAG_Buffer, sprintf(MAG_Buffer, "% 06.5f,", avg_z_m), 100); // @suppress("Float formatting support")
+			*/
+
+			/*
+			 * Calculate YAW or Heading Angle
+			 */
+			yaw = atan2f( U_hat_y_m, U_hat_z_m);
+			yaw = yaw * 180.0/PI;
 		}
 
-		/*
-		 * Wait
-		 */
-		//HAL_Delay(100);
 
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0 && pushed == 0) {//Blue button is pressed
+			//Initialise everything to zero
+			angle_count= 0;
+			for (int i = 0; i<sizeof(angles)/sizeof(float); i++) {
+				angles[i] = 0;//initialise
+			}
+			offset_avg_count = 0;
+			pushed = 1;
+			initial_yaw = yaw;
+			offset_measure = 1;
+			if (MODE == 0) {//For Console
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Initialising\n\r"), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Initial Yaw is %f\n\r", initial_yaw), 100);
+			}
+			steps = 0;
+			increase_prev = HAL_GetTick();
+			offset = 0;
+			x_pos_prev = 0;
+			y_pos_prev = 0;
+			if (MODE == 0) {//For Console
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stand Still\n\r"), 100);
+			}
+			HAL_Delay(3000);
+			/*
+			 * Store Initial Acceleration
+			 */
+			stationary_x = avg_x_a;
+			stationary_y = avg_y_a;
+			stationary_z = avg_z_a;
+			if (MODE == 0) {//For Console
+				/*
+				 * Calibration. Takes five stepping motion and averages orientation to zero.
+				 */
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary x is %f\n\r", stationary_x), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary y is %f\n\r", stationary_y), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Stationary z is %f\n\r", stationary_z), 100);
+				HAL_UART_Transmit(&huart2, (uint8_t*)ACC_Buffer, sprintf(ACC_Buffer, "Do 5 steps don't move forward\n\r"), 100);
+			}
+
+		} else if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 1 && pushed == 1) {
+			pushed = 0;
+		}
 	}
 }
 
 
-
-static const float R = 10;
-static const float H = 1.0;
-static float Q = 3;
-
+/*
+ * KALMAN FILTER LINEAR
+ */
 void KALMAN(float U, float *P, float *U_hat, float *K) {
 	*K = (*P)*H/(H*(*P)*H+R);
 	*U_hat = (*U_hat)+(*K)*(U-H*(*U_hat));
 	*P=(1-(*K)*H)*(*P)+Q;
 	return;
 }
-
 
 
 

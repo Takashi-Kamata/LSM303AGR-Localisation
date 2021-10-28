@@ -1,0 +1,16 @@
+tiny_ekf.c:16:12:choldc1	56	static
+tiny_ekf.c:41:12:choldcsl	56	static
+tiny_ekf.c:63:12:cholsl	56	static
+tiny_ekf.c:92:13:zeros	32	static
+tiny_ekf.c:100:13:dump	136	static
+tiny_ekf.c:115:13:mulmat	56	static
+tiny_ekf.c:127:13:mulvec	48	static
+tiny_ekf.c:138:13:transpose	32	static
+tiny_ekf.c:149:13:accum	40	static
+tiny_ekf.c:159:13:add	40	static
+tiny_ekf.c:169:13:sub	40	static
+tiny_ekf.c:177:13:negate	40	static
+tiny_ekf.c:186:13:mat_addeye	32	static
+tiny_ekf.c:227:13:unpack	32	static
+tiny_ekf.c:271:6:ekf_init	104	static
+tiny_ekf.c:292:5:ekf_step	112	static
